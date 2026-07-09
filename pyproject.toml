@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aegis-uba"
+version = "1.0.0"
+description = "Aegis UBA — AI-driven Insider Threat & User Behavior Analytics platform (CLI + Web GUI)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Aegis UBA Team" }]
+keywords = ["security", "ueba", "insider-threat", "anomaly-detection", "soc", "siem"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+]
+
+dependencies = [
+    "typer>=0.9",
+    "rich>=13.0",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scikit-learn>=1.3",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "jinja2>=3.1",
+    "pydantic>=2.5",
+    "platformdirs>=3.0",
+    "python-dateutil>=2.8",
+    "httpx>=0.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "ruff>=0.3", "pyinstaller>=6.0"]
+
+[project.urls]
+Homepage = "https://example.com/aegis-uba"
+Documentation = "https://example.com/aegis-uba/docs"
+
+[project.scripts]
+aegis = "aegis_uba.cli:main"
+aegis-uba = "aegis_uba.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+aegis_uba = ["web/templates/*.html", "web/static/*", "report/templates/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
