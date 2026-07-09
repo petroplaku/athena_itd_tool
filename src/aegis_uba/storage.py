@@ -134,6 +134,24 @@ class Store:
         with self._conn() as conn:
             return conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
 
+    def events_since(self, since: datetime) -> list[Event]:
+        with self._conn() as conn:
+            cur = conn.execute(
+                "SELECT * FROM events WHERE timestamp >= ? ORDER BY timestamp ASC",
+                (since.isoformat(),),
+            )
+            return [self._row_to_event(r) for r in cur.fetchall()]
+
+    def user_directory(self) -> list[dict]:
+        """One representative profile row per user (latest dept/role/host/ip)."""
+        with self._conn() as conn:
+            cur = conn.execute(
+                """SELECT user, department, role, host, source_ip, country,
+                          MAX(timestamp) AS last_seen
+                   FROM events GROUP BY user ORDER BY user"""
+            )
+            return [dict(r) for r in cur.fetchall()]
+
     def distinct_users(self) -> list[str]:
         with self._conn() as conn:
             cur = conn.execute("SELECT DISTINCT user FROM events ORDER BY user")

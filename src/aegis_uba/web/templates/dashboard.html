@@ -3,200 +3,516 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aegis UBA — SOC Dashboard</title>
+<title>Aegis UBA — SOC Console</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0d1117;--panel:#161b22;--panel2:#1c2430;--border:#26303c;--text:#e6edf3;
-    --muted:#8b98a5;--low:#3fb950;--medium:#d29922;--high:#f85149;--critical:#ff4d4d;--accent:#58a6ff;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
-  header{display:flex;justify-content:space-between;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:linear-gradient(120deg,#161b22,#0d1117);position:sticky;top:0;z-index:5}
-  header h1{margin:0;font-size:19px;letter-spacing:.3px}
-  header .org{color:var(--muted);font-size:13px}
-  .toolbar{display:flex;gap:10px;align-items:center}
-  button{cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px}
-  button:hover{border-color:var(--accent)}
-  button.primary{background:var(--accent);color:#04101f;border-color:var(--accent);font-weight:600}
-  main{padding:22px 28px;max-width:1320px;margin:0 auto}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
-  .card .n{font-size:28px;font-weight:800}
-  .card .l{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
-  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:18px}
-  .box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
-  .box h3{margin:0 0 12px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border)}
-  th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
-  tbody tr{cursor:pointer}
-  tbody tr:hover{background:var(--panel2)}
-  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
-  .LOW{background:rgba(63,185,80,.15);color:var(--low)} .MEDIUM{background:rgba(210,153,34,.15);color:var(--medium)}
-  .HIGH{background:rgba(248,81,73,.15);color:var(--high)} .CRITICAL{background:rgba(255,77,77,.2);color:var(--critical)}
-  .bar{height:7px;background:#21262d;border-radius:6px;overflow:hidden;min-width:90px}
-  .bar>span{display:block;height:100%}
-  select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px}
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:20}
-  .overlay.open{display:flex}
-  .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;width:min(720px,92vw);max-height:88vh;overflow:auto;padding:22px}
-  .modal h2{margin:0 0 4px}
-  .chip{display:inline-block;background:#1f2937;color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:5px 11px;margin:4px 6px 0 0;font-size:12px;cursor:pointer}
-  .chip:hover{border-color:var(--accent)}
-  ul.factors{padding-left:18px;margin:6px 0}
-  ul.factors li{margin-bottom:8px}
-  .muted{color:var(--muted)}
-  .evt{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
-  .close{float:right;border:none;background:none;color:var(--muted);font-size:20px}
-  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
-  .toast{position:fixed;bottom:22px;right:22px;background:var(--panel2);border:1px solid var(--accent);color:var(--text);padding:12px 16px;border-radius:10px;display:none;z-index:30}
+:root{
+  --bg:#080b12; --bg2:#0c111b; --panel:#0f1723; --panel2:#131d2c; --border:#1e2b3e;
+  --grid:#0f1a28; --text:#dbe5f0; --muted:#7286a0; --dim:#4a5a72;
+  --cyan:#22d3ee; --green:#00ff9c; --accent:#38bdf8;
+  --low:#22c55e; --medium:#eab308; --high:#f97316; --critical:#ef4444;
+  --glow:0 0 18px rgba(34,211,238,.25);
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sans:'Inter',-apple-system,Segoe UI,Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:44px 44px;}
+a{color:inherit;text-decoration:none}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+/* Sidebar */
+.side{background:linear-gradient(180deg,#0b1220,#080b12);border-right:1px solid var(--border);
+  padding:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;padding:20px 18px;border-bottom:1px solid var(--border)}
+.brand .logo{font-size:22px;filter:drop-shadow(var(--glow))}
+.brand b{font-size:16px;letter-spacing:.5px}
+.brand small{display:block;color:var(--dim);font-size:10px;font-family:var(--mono);letter-spacing:1px}
+.nav{padding:12px 10px;flex:1;overflow:auto}
+.nav a{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:9px;color:var(--muted);
+  font-weight:500;margin-bottom:3px;border:1px solid transparent;cursor:pointer;transition:.15s}
+.nav a .ic{width:18px;text-align:center;opacity:.85}
+.nav a:hover{background:var(--panel);color:var(--text)}
+.nav a.active{background:linear-gradient(90deg,rgba(34,211,238,.14),transparent);color:var(--cyan);
+  border-color:rgba(34,211,238,.3);box-shadow:inset 2px 0 0 var(--cyan)}
+.side .foot{padding:14px 18px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--dim)}
+.threatpill{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding:8px 10px;
+  border-radius:8px;background:var(--panel);border:1px solid var(--border);font-size:11px}
+/* Topbar */
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 26px;
+  border-bottom:1px solid var(--border);background:rgba(8,11,18,.8);backdrop-filter:blur(6px);
+  position:sticky;top:0;z-index:10}
+.topbar h2{margin:0;font-size:17px;font-weight:600}
+.topbar .sub{color:var(--dim);font-size:12px;font-family:var(--mono)}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--dim);margin-right:6px}
+.status-dot.live{background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.content{padding:22px 26px;overflow:auto}
+/* Components */
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.grid{display:grid;gap:16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
+.card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--border);
+  border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--cyan),transparent)}
+.card .n{font-size:30px;font-weight:700;font-family:var(--mono);line-height:1.1}
+.card .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.9px;margin-top:4px}
+.box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px}
+.box h3{margin:0 0 14px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;
+  display:flex;align-items:center;gap:8px}
+.box h3::before{content:'';width:3px;height:13px;background:var(--cyan);border-radius:2px;box-shadow:var(--glow)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--border);font-size:13px}
+th{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono)}
+tbody tr{cursor:pointer;transition:.12s}
+tbody tr:hover{background:var(--panel2)}
+.badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;
+  font-family:var(--mono);letter-spacing:.5px;border:1px solid transparent}
+.LOW{background:rgba(34,197,94,.12);color:var(--low);border-color:rgba(34,197,94,.3)}
+.MEDIUM{background:rgba(234,179,8,.12);color:var(--medium);border-color:rgba(234,179,8,.3)}
+.HIGH{background:rgba(249,115,22,.14);color:var(--high);border-color:rgba(249,115,22,.35)}
+.CRITICAL{background:rgba(239,68,68,.16);color:var(--critical);border-color:rgba(239,68,68,.4);
+  animation:critblink 2s infinite}
+@keyframes critblink{0%,100%{box-shadow:0 0 0 rgba(239,68,68,0)}50%{box-shadow:0 0 12px rgba(239,68,68,.4)}}
+.bar{height:6px;background:#0a1420;border-radius:6px;overflow:hidden;min-width:80px;border:1px solid var(--border)}
+.bar>span{display:block;height:100%;border-radius:6px}
+button,.btn{cursor:pointer;font-family:var(--sans);border:1px solid var(--border);background:var(--panel2);
+  color:var(--text);padding:9px 15px;border-radius:9px;font-size:13px;font-weight:500;transition:.15s}
+button:hover,.btn:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:var(--glow)}
+button.primary{background:linear-gradient(90deg,#0891b2,#0e7490);border-color:var(--cyan);color:#eafcff;font-weight:600}
+button.primary:hover{filter:brightness(1.15);color:#fff}
+button.danger{border-color:rgba(239,68,68,.4);color:#fca5a5}
+button.danger:hover{background:rgba(239,68,68,.12);color:#fff;box-shadow:0 0 12px rgba(239,68,68,.35)}
+button:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+input,select{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;
+  padding:9px 11px;font-size:13px;font-family:var(--sans)}
+input:focus,select:focus{outline:none;border-color:var(--cyan);box-shadow:var(--glow)}
+label.fld{display:block;margin-bottom:14px}
+label.fld span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+label.fld input,label.fld select{width:100%}
+.chip{display:inline-block;background:var(--panel2);color:var(--cyan);border:1px solid var(--border);
+  border-radius:7px;padding:5px 11px;margin:4px 6px 0 0;font-size:12px;cursor:pointer;font-family:var(--mono)}
+.chip:hover{border-color:var(--cyan);box-shadow:var(--glow)}
+.muted{color:var(--muted)} .dim{color:var(--dim)} .mono{font-family:var(--mono)}
+.kpi-mini{font-family:var(--mono);font-size:22px;font-weight:700}
+/* feed */
+.feed{font-family:var(--mono);font-size:12px;max-height:520px;overflow:auto;border:1px solid var(--border);
+  border-radius:10px;background:#060a10;padding:6px}
+.feed .line{padding:5px 8px;border-bottom:1px solid #0d1622;display:flex;gap:10px;align-items:baseline;white-space:nowrap}
+.feed .t{color:var(--dim)} .feed .u{color:var(--cyan);min-width:110px}
+.feed .a{color:var(--text);min-width:120px} .feed .d{color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.feed .line.evt-fail{color:#fca5a5} .feed .line.evt-priv{color:#fdba74}
+.feed .line.inject{background:rgba(239,68,68,.08);border-left:2px solid var(--critical)}
+.feed .line.alert{background:rgba(34,211,238,.07);border-left:2px solid var(--cyan)}
+/* toast */
+.toasts{position:fixed;bottom:20px;right:20px;z-index:50;display:flex;flex-direction:column;gap:10px}
+.toast{background:var(--panel2);border:1px solid var(--cyan);border-radius:10px;padding:12px 16px;
+  box-shadow:var(--glow);max-width:360px;animation:slidein .25s}
+.toast.crit{border-color:var(--critical);box-shadow:0 0 16px rgba(239,68,68,.4)}
+@keyframes slidein{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(3,6,12,.72);display:none;align-items:center;justify-content:center;z-index:40}
+.overlay.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;width:min(760px,94vw);
+  max-height:90vh;overflow:auto;padding:24px}
+.close{float:right;border:none;background:none;color:var(--muted);font-size:22px;cursor:pointer}
+ul.factors{padding-left:0;list-style:none;margin:8px 0}
+ul.factors li{padding:11px 13px;border:1px solid var(--border);border-radius:10px;margin-bottom:9px;background:var(--bg2)}
+.factor-h{display:flex;justify-content:space-between;font-weight:600}
+.spark{color:var(--muted);font-size:12px}
+.source-card{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--bg2)}
+.source-card h4{margin:0 0 6px;font-size:14px}
+.hr{height:1px;background:var(--border);margin:16px 0;border:0}
+.pctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.led{width:9px;height:9px;border-radius:50%;display:inline-block}
+.led.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.led.off{background:var(--dim)}
 </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1>🛡️ Aegis UBA <span class="muted" style="font-size:12px">v{{ version }}</span></h1>
-    <div class="org">{{ organization }} · Insider Threat &amp; User Behavior Analytics</div>
-  </div>
-  <div class="toolbar">
-    <button onclick="genData()">⚙ Generate demo data</button>
-    <button class="primary" onclick="runAnalysis()">▶ Run analysis</button>
-  </div>
-</header>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <span class="logo">🛡️</span>
+      <div><b>AEGIS<span style="color:var(--cyan)">UBA</span></b><small>SOC CONSOLE v{{ version }}</small></div>
+    </div>
+    <nav class="nav" id="nav">
+      <a data-view="overview" class="active"><span class="ic">▤</span> Overview</a>
+      <a data-view="live"><span class="ic">◉</span> Live Monitor</a>
+      <a data-view="users"><span class="ic">☰</span> Users</a>
+      <a data-view="alerts"><span class="ic">⚠</span> Alerts</a>
+      <a data-view="responses"><span class="ic">⟳</span> Response Log</a>
+      <a data-view="data"><span class="ic">⛁</span> Data &amp; Model</a>
+      <a data-view="detections"><span class="ic">◈</span> Detection Config</a>
+      <a data-view="settings"><span class="ic">⚙</span> Settings</a>
+    </nav>
+    <div class="foot">
+      <div class="threatpill"><span>THREAT LEVEL</span><b id="threatLevel" style="color:var(--low)">—</b></div>
+      <div class="threatpill"><span>STREAM</span><span><span id="streamLed" class="led off"></span> <span id="streamTxt">offline</span></span></div>
+    </div>
+  </aside>
 
-<main>
-  <div class="cards" id="cards"></div>
-
-  <div class="grid">
-    <div class="box"><h3>Activity volume (events/day)</h3><canvas id="trend" height="120"></canvas></div>
-    <div class="box"><h3>Risk distribution</h3><canvas id="dist" height="120"></canvas></div>
-  </div>
-
-  <div class="box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <h3 style="margin:0">Users by risk</h3>
-      <div>
-        <span class="muted" style="font-size:12px">Min level</span>
-        <select id="minLevel" onchange="loadAlerts()">
-          <option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
-        </select>
+  <div class="main">
+    <div class="topbar">
+      <div><h2 id="viewTitle">Overview</h2><div class="sub" id="viewSub">Organization threat posture</div></div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <span class="mono muted" id="orgName">{{ organization }}</span>
+        <span class="mono" style="font-size:12px"><span id="clock"></span></span>
+        <button class="primary" onclick="runAnalysis()">▶ Run Analysis</button>
       </div>
     </div>
-    <table>
-      <thead><tr><th>User</th><th>Dept / Role</th><th>Risk</th><th>Level</th><th>Top factor</th></tr></thead>
-      <tbody id="alertRows"></tbody>
-    </table>
-    <div class="empty" id="emptyState" style="display:none">
-      No data yet — click <b>Generate demo data</b>, then <b>Run analysis</b>.
-    </div>
+    <div class="content" id="content"></div>
   </div>
-</main>
-
-<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
-  <div class="modal" id="modal"></div>
 </div>
-<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<div class="toasts" id="toasts"></div>
 
 <script>
-const LEVELS = ["LOW","MEDIUM","HIGH","CRITICAL"];
-const COLORS = {LOW:"#3fb950",MEDIUM:"#d29922",HIGH:"#f85149",CRITICAL:"#ff4d4d"};
-let trendChart, distChart;
+function _showErr(m){const c=document.getElementById('content');if(c)c.innerHTML='<pre style="color:#f87171;white-space:pre-wrap">'+m+'</pre>';}
+window.addEventListener('error',e=>_showErr('JS ERROR: '+e.message+'\n'+(e.filename||'')+':'+e.lineno+':'+e.colno));
+window.addEventListener('unhandledrejection',e=>_showErr('PROMISE REJECTION: '+(e.reason&&e.reason.message||e.reason)));
+const LEVELS=["LOW","MEDIUM","HIGH","CRITICAL"];
+const COLORS={LOW:"#22c55e",MEDIUM:"#eab308",HIGH:"#f97316",CRITICAL:"#ef4444"};
+const state={charts:{},sse:null,streamRunning:false};
 
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2600);}
-function fmtBytes(n){const u=["B","KB","MB","GB","TB"];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return n.toFixed(1)+" "+u[i];}
+const api=async(u,opt)=>{const r=await fetch(u,opt);if(!r.ok){let m=r.statusText;try{m=(await r.json()).detail||m}catch(e){}throw new Error(m)}return r.status===204?null:r.json()};
+const post=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):null});
+const fmtB=n=>{if(!n)return'';const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return n.toFixed(n<10?1:0)+u[i]};
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg,crit){const t=document.createElement('div');t.className='toast'+(crit?' crit':'');t.innerHTML=msg;document.getElementById('toasts').appendChild(t);setTimeout(()=>t.remove(),crit?7000:3500);}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString()},1000);
 
-async function loadSummary(){
-  const s = await (await fetch('/api/summary')).json();
-  document.getElementById('cards').innerHTML = `
-    <div class="card"><div class="n">${s.total_events.toLocaleString()}</div><div class="l">Events</div></div>
-    <div class="card"><div class="n">${s.total_users}</div><div class="l">Users</div></div>
-    <div class="card"><div class="n" style="color:var(--critical)">${s.counts.CRITICAL}</div><div class="l">Critical</div></div>
-    <div class="card"><div class="n" style="color:var(--high)">${s.counts.HIGH}</div><div class="l">High</div></div>
-    <div class="card"><div class="n" style="color:var(--medium)">${s.counts.MEDIUM}</div><div class="l">Medium</div></div>
-    <div class="card"><div class="n" style="color:var(--low)">${s.counts.LOW}</div><div class="l">Low</div></div>`;
-  drawTrend(s.trend_labels, s.trend_values);
-  drawDist(s.counts);
+/* ---------- Router ---------- */
+const TITLES={overview:['Overview','Organization threat posture'],live:['Live Monitor','Real-time telemetry & detection'],
+  users:['Users','Risk-ranked workforce'],alerts:['Alerts','Explainable findings'],responses:['Response Log','Automated action audit trail'],
+  data:['Data & Model','Sources, datasets & model training'],detections:['Detection Config','Detectors & thresholds'],settings:['Settings','Organization & integrations']};
+function go(view){
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.view===view));
+  document.getElementById('viewTitle').textContent=TITLES[view][0];
+  document.getElementById('viewSub').textContent=TITLES[view][1];
+  if(view!=='live'&&state.sse){state.sse.close();state.sse=null;}
+  location.hash=view;
+  VIEWS[view]();
+}
+document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a');if(a)go(a.dataset.view)});
+
+/* ---------- Overview ---------- */
+const VIEWS={};
+VIEWS.overview=async()=>{
+  const c=document.getElementById('content');
+  c.innerHTML=`<div class="cards" id="ovCards"></div>
+   <div class="grid" style="grid-template-columns:1.5fr 1fr">
+     <div class="box"><h3>Activity volume · events/day</h3><canvas id="trend" height="110"></canvas></div>
+     <div class="box"><h3>Risk distribution</h3><canvas id="dist" height="110"></canvas></div>
+   </div>
+   <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:16px">
+     <div class="box"><h3>Model status</h3><div id="modelBox" class="muted">—</div></div>
+     <div class="box"><h3>Top critical users</h3><div id="critBox" class="muted">—</div></div>
+   </div>`;
+  const s=await api('/api/summary');
+  updateGlobal(s);
+  document.getElementById('ovCards').innerHTML=`
+    ${kpi(s.total_events.toLocaleString(),'Events')}
+    ${kpi(s.total_users,'Users')}
+    ${kpi(s.counts.CRITICAL,'Critical','var(--critical)')}
+    ${kpi(s.counts.HIGH,'High','var(--high)')}
+    ${kpi(s.counts.MEDIUM,'Medium','var(--medium)')}
+    ${kpi(s.response_count,'Responses','var(--cyan)')}`;
+  drawTrend(s.trend_labels,s.trend_values); drawDist(s.counts);
+  const m=s.model;
+  document.getElementById('modelBox').innerHTML=m.fitted?
+    `<div class="mono" style="line-height:1.9">
+      <div><span class="led on"></span> Model trained</div>
+      <div class="dim">trained&nbsp;&nbsp;${esc(m.trained_at)}</div>
+      <div class="dim">corpus&nbsp;&nbsp;${m.train_events.toLocaleString()} events · ${m.train_users} users</div>
+      <div class="dim">features&nbsp;${m.features} · contamination ${m.contamination}</div>
+     </div>`:
+    `<div><span class="led off"></span> No trained model. <a class="chip" onclick="go('data')">Train one →</a></div>`;
+  const crit=await api('/api/users?min_level=HIGH');
+  document.getElementById('critBox').innerHTML=crit.length?crit.slice(0,6).map(u=>
+    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openUser('${u.user}')">
+       <span><b>${esc(u.user)}</b> <span class="dim mono">${esc(u.department)}</span></span>
+       <span><span class="badge ${u.risk_level}">${u.risk_level}</span> <b class="mono">${u.risk_score.toFixed(0)}</b></span></div>`).join(''):
+    '<span class="dim">No HIGH+ users. Run analysis or start the live monitor.</span>';
+};
+const kpi=(n,l,col)=>`<div class="card"><div class="n" style="${col?'color:'+col:''}">${n}</div><div class="l">${l}</div></div>`;
+
+function updateGlobal(s){
+  const c=s.counts;const lvl=c.CRITICAL?'CRITICAL':c.HIGH?'HIGH':c.MEDIUM?'MEDIUM':'LOW';
+  const el=document.getElementById('threatLevel');el.textContent=lvl;el.style.color=COLORS[lvl];
+  const run=s.stream&&s.stream.running;state.streamRunning=run;
+  document.getElementById('streamLed').className='led '+(run?'on':'off');
+  document.getElementById('streamTxt').textContent=run?'live':'offline';
+  document.getElementById('orgName').textContent=s.organization;
+}
+function drawTrend(labels,values){const ctx=document.getElementById('trend');if(!ctx||!window.Chart)return;
+  state.charts.trend&&state.charts.trend.destroy();
+  const g=ctx.getContext('2d').createLinearGradient(0,0,0,160);g.addColorStop(0,'rgba(34,211,238,.35)');g.addColorStop(1,'rgba(34,211,238,0)');
+  state.charts.trend=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:values,borderColor:'#22d3ee',backgroundColor:g,fill:true,tension:.35,pointRadius:0,borderWidth:2}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#4a5a72',maxTicksLimit:8,font:{family:'JetBrains Mono'}},grid:{display:false}},y:{ticks:{color:'#4a5a72'},grid:{color:'#12202f'}}}}});}
+function drawDist(counts){const ctx=document.getElementById('dist');if(!ctx||!window.Chart)return;
+  state.charts.dist&&state.charts.dist.destroy();
+  state.charts.dist=new Chart(ctx,{type:'doughnut',data:{labels:LEVELS,datasets:[{data:LEVELS.map(l=>counts[l]),backgroundColor:LEVELS.map(l=>COLORS[l]),borderColor:'#0f1723',borderWidth:2}]},
+    options:{cutout:'62%',plugins:{legend:{position:'right',labels:{color:'#dbe5f0',font:{family:'JetBrains Mono',size:11},boxWidth:12}}}}});}
+
+/* ---------- Live Monitor ---------- */
+VIEWS.live=async()=>{
+  const c=document.getElementById('content');
+  c.innerHTML=`
+   <div class="box" style="margin-bottom:16px">
+     <div class="pctl">
+       <span class="mono muted">EPS</span><input id="eps" type="number" value="6" min="1" max="60" style="width:80px">
+       <span class="mono muted">INJECT&nbsp;PROB</span><input id="inj" type="number" value="0.08" step="0.01" min="0" max="0.5" style="width:90px">
+       <button class="primary" id="startBtn" onclick="startStream()">▶ Start stream</button>
+       <button class="danger" id="stopBtn" onclick="stopStream()" disabled>■ Stop</button>
+       <span style="flex:1"></span>
+       <span class="mono dim" id="liveStat">idle</span>
+     </div>
+     <div class="dim mono" style="margin-top:8px;font-size:11px">Simulates live enterprise telemetry (SIEM/EDR feed), scores the recent window against the trained model every few seconds, and raises threat notifications. Swap <code>_produce()</code> for a real collector in production.</div>
+   </div>
+   <div class="cards" id="liveCards"></div>
+   <div class="grid" style="grid-template-columns:1.6fr 1fr">
+     <div class="box"><h3>Live event stream <span id="liveDot" class="status-dot"></span></h3><div class="feed" id="feed"></div></div>
+     <div class="box"><h3>Threat notifications</h3><div class="feed" id="alertFeed" style="max-height:520px"></div></div>
+   </div>`;
+  refreshLiveCards();
+  connectSSE();
+};
+async function refreshLiveCards(){
+  const st=await api('/api/stream/status');const s=await api('/api/summary');
+  document.getElementById('liveCards').innerHTML=`
+    ${kpi(st.events_emitted.toLocaleString(),'Events streamed','var(--cyan)')}
+    ${kpi(st.anomalies_injected,'Threats injected','var(--high)')}
+    ${kpi(st.roster_size,'Monitored users')}
+    ${kpi(s.counts.CRITICAL+s.counts.HIGH,'Active HIGH+ alerts','var(--critical)')}
+    ${kpi(st.uptime_seconds.toFixed(0)+'s','Uptime')}`;
+  setLiveButtons(st.running);
+}
+function setLiveButtons(run){state.streamRunning=run;
+  const sb=document.getElementById('startBtn'),tb=document.getElementById('stopBtn');
+  if(sb){sb.disabled=run;tb.disabled=!run;}
+  const ls=document.getElementById('liveStat');if(ls)ls.textContent=run?'● streaming':'idle';
+  const dot=document.getElementById('liveDot');if(dot)dot.className='status-dot'+(run?' live':'');
+  document.getElementById('streamLed').className='led '+(run?'on':'off');
+  document.getElementById('streamTxt').textContent=run?'live':'offline';
+}
+async function startStream(){
+  const eps=+document.getElementById('eps').value,inj=+document.getElementById('inj').value;
+  toast('Starting live monitor…');await post('/api/stream/start',{eps,inject_prob:inj});
+  setLiveButtons(true);connectSSE();setTimeout(refreshLiveCards,1500);
+}
+async function stopStream(){await post('/api/stream/stop');setLiveButtons(false);refreshLiveCards();}
+function connectSSE(){
+  if(state.sse)state.sse.close();
+  const es=new EventSource('/api/stream');state.sse=es;
+  es.onmessage=ev=>{let d;try{d=JSON.parse(ev.data)}catch(e){return}handleStream(d)};
+  es.onerror=()=>{};
+}
+function handleStream(d){
+  const feed=document.getElementById('feed');
+  if(d.type==='event'&&feed){
+    const cls=d.action==='failed_login'?'evt-fail':(d.action==='privilege_escalation'?'evt-priv':'');
+    const line=document.createElement('div');line.className='line '+cls;
+    line.innerHTML=`<span class="t">${d.ts.slice(11,19)}</span><span class="u">${esc(d.user)}</span><span class="a">${esc(d.action)}</span><span class="d">${esc(d.source_ip)}${d.country&&d.country!=='US'?' · '+d.country:''} ${d.bytes?'· '+fmtB(d.bytes):''} ${esc(d.resource||'')}</span>`;
+    feed.prepend(line);while(feed.children.length>120)feed.lastChild.remove();
+  } else if(d.type==='inject'&&feed){
+    const line=document.createElement('div');line.className='line inject';
+    line.innerHTML=`<span class="t">${d.ts.slice(11,19)}</span><span class="u">${esc(d.user)}</span><span class="a">⚡ INJECT</span><span class="d">scenario: ${esc(d.scenario)}</span>`;
+    feed.prepend(line);
+  } else if(d.type==='alert'){
+    const af=document.getElementById('alertFeed');
+    if(af){const line=document.createElement('div');line.className='line alert';
+      line.innerHTML=`<span class="t">${(d.ts||'').slice(11,19)}</span><span class="badge ${d.risk_level}">${d.risk_level}</span><span class="u">${esc(d.user)}</span><span class="d">${esc(d.top_factor)} · ${d.risk_score.toFixed(0)}</span>`;
+      line.style.cursor='pointer';line.onclick=()=>openUser(d.user);af.prepend(line);while(af.children.length>60)af.lastChild.remove();}
+    if(d.risk_level==='CRITICAL'||d.risk_level==='HIGH')
+      toast(`<span class="badge ${d.risk_level}">${d.risk_level}</span> <b>${esc(d.user)}</b><br><span class="muted">${esc(d.top_factor)} · risk ${d.risk_score.toFixed(0)}</span>`,d.risk_level==='CRITICAL');
+  } else if(d.type==='scored'){refreshLiveCards();}
 }
 
-function drawTrend(labels, values){
-  const ctx = document.getElementById('trend');
-  if(trendChart) trendChart.destroy();
-  if(!window.Chart) return;
-  trendChart = new Chart(ctx,{type:'line',data:{labels,datasets:[{data:values,borderColor:'#58a6ff',backgroundColor:'rgba(88,166,255,.15)',fill:true,tension:.3,pointRadius:0}]},
-    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b98a5',maxTicksLimit:8},grid:{display:false}},y:{ticks:{color:'#8b98a5'},grid:{color:'#26303c'}}}}});
-}
-function drawDist(counts){
-  const ctx = document.getElementById('dist');
-  if(distChart) distChart.destroy();
-  if(!window.Chart) return;
-  distChart = new Chart(ctx,{type:'doughnut',data:{labels:LEVELS,datasets:[{data:LEVELS.map(l=>counts[l]),backgroundColor:LEVELS.map(l=>COLORS[l]),borderColor:'#161b22'}]},
-    options:{plugins:{legend:{position:'right',labels:{color:'#e6edf3'}}}}});
+/* ---------- Users ---------- */
+VIEWS.users=async()=>{
+  const c=document.getElementById('content');
+  const depts=await api('/api/departments');
+  c.innerHTML=`<div class="box">
+     <div class="pctl" style="margin-bottom:14px">
+       <input id="uq" placeholder="🔍 search user…" style="width:220px" oninput="loadUsers()">
+       <select id="udept" onchange="loadUsers()"><option value="">All departments</option>${depts.map(d=>`<option>${esc(d)}</option>`).join('')}</select>
+       <select id="ulvl" onchange="loadUsers()">${LEVELS.map((l,i)=>`<option value="${l}" ${l==='LOW'?'selected':''}>≥ ${l}</option>`).join('')}</select>
+       <span style="flex:1"></span><span class="dim mono" id="ucount"></span>
+     </div>
+     <table><thead><tr><th>User</th><th>Dept / Role</th><th>Host · IP</th><th>Risk</th><th>Level</th><th>Top factor</th></tr></thead><tbody id="uRows"></tbody></table>
+   </div>`;
+  loadUsers();
+};
+async function loadUsers(){
+  const q=document.getElementById('uq').value,d=document.getElementById('udept').value,l=document.getElementById('ulvl').value;
+  const rows=await api(`/api/users?q=${encodeURIComponent(q)}&department=${encodeURIComponent(d)}&min_level=${l}`);
+  document.getElementById('ucount').textContent=rows.length+' users';
+  document.getElementById('uRows').innerHTML=rows.map(u=>`<tr onclick="openUser('${u.user}')">
+    <td><b>${esc(u.user)}</b></td><td class="muted">${esc(u.department)} / ${esc(u.role)}</td>
+    <td class="mono dim">${esc(u.host)} · ${esc(u.source_ip)}</td>
+    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">${u.risk_score.toFixed(0)}</span><div class="bar"><span style="width:${u.risk_score}%;background:${COLORS[u.risk_level]}"></span></div></div></td>
+    <td><span class="badge ${u.risk_level}">${u.risk_level}</span></td><td class="muted">${esc(u.top_factor)}</td></tr>`).join('')
+    ||'<tr><td colspan="6" class="dim" style="text-align:center;padding:30px">No users match.</td></tr>';
 }
 
+/* ---------- Alerts ---------- */
+VIEWS.alerts=async()=>{
+  const c=document.getElementById('content');
+  c.innerHTML=`<div class="box">
+    <div class="pctl" style="margin-bottom:14px">
+      <input id="aq" placeholder="🔍 search user…" style="width:220px" oninput="loadAlerts()">
+      <select id="alvl" onchange="loadAlerts()">${LEVELS.map(l=>`<option value="${l}" ${l==='MEDIUM'?'selected':''}>≥ ${l}</option>`).join('')}</select>
+      <span style="flex:1"></span><span class="dim mono" id="acount"></span>
+    </div><div id="alertList"></div></div>`;
+  loadAlerts();
+};
 async function loadAlerts(){
-  const lvl = document.getElementById('minLevel').value;
-  const rows = await (await fetch('/api/alerts?min_level='+lvl)).json();
-  const tbody = document.getElementById('alertRows');
-  document.getElementById('emptyState').style.display = rows.length? 'none':'block';
-  tbody.innerHTML = rows.map(a=>{
-    const top = a.explanations.length? a.explanations[0].factor : '—';
-    return `<tr onclick="openUser('${a.user}')">
-      <td><b>${a.user}</b></td>
-      <td class="muted">${a.department} / ${a.role}</td>
-      <td><div style="display:flex;align-items:center;gap:8px"><span>${a.risk_score.toFixed(0)}</span>
-        <div class="bar"><span style="width:${a.risk_score}%;background:${COLORS[a.risk_level]}"></span></div></div></td>
-      <td><span class="badge ${a.risk_level}">${a.risk_level}</span></td>
-      <td class="muted">${top}</td></tr>`;
-  }).join('');
+  const q=document.getElementById('aq').value,l=document.getElementById('alvl').value;
+  const rows=await api(`/api/alerts?min_level=${l}&q=${encodeURIComponent(q)}`);
+  document.getElementById('acount').textContent=rows.length+' alerts';
+  document.getElementById('alertList').innerHTML=rows.map(a=>`
+   <div class="source-card" style="margin-bottom:12px;border-left:3px solid ${COLORS[a.risk_level]}">
+     <div style="display:flex;justify-content:space-between;align-items:center">
+       <div><b style="font-size:15px">${esc(a.user)}</b> <span class="badge ${a.risk_level}">${a.risk_level}</span>
+         <span class="dim mono" style="margin-left:8px">${esc(a.department)} · ${esc(a.role)} · ${a.event_count} events</span></div>
+       <div class="mono" style="font-size:20px;color:${COLORS[a.risk_level]}">${a.risk_score.toFixed(0)}<span class="dim" style="font-size:12px">/100</span></div>
+     </div>
+     <div style="margin-top:8px">${a.explanations.map(e=>`<span class="chip" style="cursor:default;color:var(--muted)">${esc(e.factor)} +${e.weight.toFixed(0)}</span>`).join('')||'<span class="dim">no factors</span>'}</div>
+     <div style="margin-top:10px">${a.recommended_actions.map(x=>`<span class="chip" onclick="respondUser('${a.user}','${mapAction(x)}','${esc(x)}')">⟳ ${esc(x)}</span>`).join('')}
+       <span class="chip" style="border-color:var(--cyan)" onclick="openUser('${a.user}')">🔎 Investigate</span></div>
+   </div>`).join('')||'<div class="dim" style="text-align:center;padding:40px">No alerts at this level.</div>';
 }
 
+/* ---------- Investigate (modal) ---------- */
 async function openUser(user){
-  const d = await (await fetch('/api/user/'+encodeURIComponent(user))).json();
-  const a = d.alert;
-  const factors = a.explanations.map(e=>`<li><b>${e.factor}</b> <span class="muted">(+${e.weight.toFixed(0)})</span><br><span class="muted">${e.detail}</span></li>`).join('');
-  const actions = a.recommended_actions.map(x=>`<span class="chip" onclick="respond('${a.user}','${mapAction(x)}','${x}')">${x}</span>`).join('');
-  const evts = d.events.slice().reverse().map(e=>`<tr><td class="evt">${e.timestamp.replace('T',' ').slice(0,19)}</td><td class="evt">${e.action}</td><td class="evt">${e.source_ip} ${e.country!=='US'?'· '+e.country:''}</td><td class="evt">${e.bytes?fmtBytes(e.bytes):''} ${e.resource||''}</td></tr>`).join('');
-  document.getElementById('modal').innerHTML = `
-    <button class="close" onclick="closeModal()">×</button>
-    <h2>${a.user} <span class="badge ${a.risk_level}">${a.risk_level}</span></h2>
-    <div class="muted">${a.department} · ${a.role} · ${a.event_count} events · window ${a.window_start.slice(0,10)} · risk <b style="color:${COLORS[a.risk_level]}">${a.risk_score.toFixed(0)}/100</b> · ML ${(a.ml_score*100).toFixed(0)}%</div>
-    <h3 style="margin-top:16px">Why flagged</h3><ul class="factors">${factors||'<li class="muted">No anomalous factors.</li>'}</ul>
-    <h3>Recommended response <span class="muted" style="font-size:11px">(click to dispatch — simulated)</span></h3><div>${actions}</div>
-    <h3 style="margin-top:16px">Recent activity (${d.event_total} total)</h3>
-    <table><thead><tr><th>Time</th><th>Action</th><th>Source</th><th>Detail</th></tr></thead><tbody>${evts}</tbody></table>`;
+  let d;try{d=await api('/api/user/'+encodeURIComponent(user))}catch(e){toast('No data for '+user);return}
+  const a=d.alert;const lvl=a?a.risk_level:'LOW';
+  const factors=a&&a.explanations.length?a.explanations.map(e=>`<li><div class="factor-h"><span>${esc(e.factor)}</span><span class="mono" style="color:${COLORS[lvl]}">+${e.weight.toFixed(0)}</span></div><div class="spark">${esc(e.detail)}</div></li>`).join(''):'<li class="dim">No anomalous factors — behaving within baseline.</li>';
+  const actions=a?a.recommended_actions.map(x=>`<span class="chip" onclick="respondUser('${user}','${mapAction(x)}','${esc(x)}')">⟳ ${esc(x)}</span>`).join(''):'';
+  const evts=d.events.slice().reverse().map(e=>`<tr><td class="mono dim">${e.timestamp.slice(0,19).replace('T',' ')}</td><td class="mono">${esc(e.action)}</td><td class="mono dim">${esc(e.source_ip)}${e.country&&e.country!=='US'?' · '+esc(e.country):''}</td><td class="mono dim">${e.bytes?fmtB(e.bytes):''} ${esc(e.resource||'')}</td></tr>`).join('');
+  document.getElementById('modal').innerHTML=`<button class="close" onclick="closeModal()">×</button>
+    <h2 style="margin:0">${esc(user)} <span class="badge ${lvl}">${lvl}</span></h2>
+    <div class="muted mono" style="font-size:12px;margin-top:4px">${a?esc(a.department)+' · '+esc(a.role)+' · risk '+a.risk_score.toFixed(0)+'/100 · ML '+(a.ml_score*100).toFixed(0)+'%':'no alert on record'} · ${d.event_total} events</div>
+    <h3 style="margin:18px 0 6px;color:var(--muted);font-size:12px;letter-spacing:1px">WHY FLAGGED</h3><ul class="factors">${factors}</ul>
+    ${actions?`<h3 style="margin:8px 0 6px;color:var(--muted);font-size:12px;letter-spacing:1px">RECOMMENDED RESPONSE <span class="dim">(simulated)</span></h3><div>${actions} <span class="chip" style="border-color:var(--high)" onclick="autoRespond('${user}')">⚡ Auto-respond all</span></div>`:''}
+    <h3 style="margin:18px 0 6px;color:var(--muted);font-size:12px;letter-spacing:1px">RECENT ACTIVITY</h3>
+    <div style="max-height:280px;overflow:auto"><table><thead><tr><th>Time</th><th>Action</th><th>Source</th><th>Detail</th></tr></thead><tbody>${evts}</tbody></table></div>`;
   document.getElementById('overlay').classList.add('open');
 }
-function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function mapAction(r){r=r.toLowerCase();if(r.includes('lock'))return'lock_account';if(r.includes('revoke active')||r.includes('session'))return'revoke_sessions';if(r.includes('mfa'))return'require_mfa';if(r.includes('block')||r.includes('download')||r.includes('usb'))return'disable_downloads';return'notify_soc';}
+async function respondUser(user,action,label){const r=await post('/api/respond',{user,action,reason:label});toast(`<b>${r.mode}</b>: ${action} → ${esc(user)}`);}
+async function autoRespond(user){const r=await post('/api/respond/auto/'+encodeURIComponent(user)+'?force=false');toast(`Dispatched ${r.results.length} simulated actions for ${esc(user)}`);}
 
-function mapAction(rec){
-  rec=rec.toLowerCase();
-  if(rec.includes('lock'))return'lock_account';
-  if(rec.includes('revoke active')||rec.includes('session'))return'revoke_sessions';
-  if(rec.includes('mfa'))return'require_mfa';
-  if(rec.includes('block')||rec.includes('download')||rec.includes('usb'))return'disable_downloads';
-  return'notify_soc';
-}
-async function respond(user,action,label){
-  const r = await (await fetch('/api/respond',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({user,action,reason:label})})).json();
-  toast(`${r.mode}: ${action} → ${user}`);
-}
-async function genData(){
-  toast('Generating demo data…');
-  await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({users:30,days:30})});
-  await runAnalysis();
-}
-async function runAnalysis(){
-  toast('Running ML + rule analysis…');
-  const r = await fetch('/api/analyze',{method:'POST'});
-  if(!r.ok){toast('Generate data first.');return;}
-  await refresh();
-  toast('Analysis complete.');
-}
-async function refresh(){await loadSummary();await loadAlerts();}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
-refresh();
+/* ---------- Response Log ---------- */
+VIEWS.responses=async()=>{
+  const c=document.getElementById('content');const rows=await api('/api/responses');
+  c.innerHTML=`<div class="box"><h3>Response audit trail</h3><table><thead><tr><th>When (UTC)</th><th>User</th><th>Action</th><th>Mode</th><th>Detail</th></tr></thead><tbody>${
+    rows.length?rows.map(r=>`<tr><td class="mono dim">${r.created_at.slice(0,19).replace('T',' ')}</td><td><b>${esc(r.user)}</b></td><td class="mono">${esc(r.action)}</td><td><span class="badge ${r.mode==='ENFORCED'?'CRITICAL':'MEDIUM'}">${r.mode}</span></td><td class="muted">${esc(r.detail)}</td></tr>`).join(''):'<tr><td colspan="5" class="dim" style="text-align:center;padding:30px">No response actions recorded.</td></tr>'
+  }</tbody></table></div>`;
+};
+
+/* ---------- Data & Model ---------- */
+VIEWS.data=async()=>{
+  const c=document.getElementById('content');const s=await api('/api/summary');const ds=await api('/api/datasets');
+  c.innerHTML=`
+   <div class="grid" style="grid-template-columns:1fr 1fr 1fr">
+     <div class="source-card"><h4>⛁ Synthetic enterprise</h4><p class="muted" style="font-size:13px">Realistic org telemetry with planted insider scenarios.</p>
+       <div class="pctl"><input id="synU" type="number" value="30" style="width:70px" title="users"><input id="synD" type="number" value="30" style="width:70px" title="days">
+       <button class="primary" onclick="genData()">Generate</button></div></div>
+     <div class="source-card"><h4>⬆ Upload logs</h4><p class="muted" style="font-size:13px">CSV / JSON / auth.log. Auto-detected & normalized.</p>
+       <input id="upFile" type="file" accept=".csv,.json,.jsonl,.log" style="width:100%;margin-bottom:8px">
+       <label class="mono dim" style="font-size:12px"><input type="checkbox" id="upReset"> reset first</label><br>
+       <button class="primary" style="margin-top:8px" onclick="uploadFile()">Ingest file</button></div>
+     <div class="source-card"><h4>🎓 CERT dataset</h4><p class="muted" style="font-size:13px">CMU insider-threat benchmark. Point to an extracted release dir.</p>
+       <input id="certPath" placeholder="/path/to/cert/r4.2" style="width:100%;margin-bottom:8px">
+       <div class="pctl"><input id="certLimit" type="number" placeholder="row cap" style="width:100px"><button class="primary" onclick="loadCert()">Load</button></div></div>
+   </div>
+   <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:16px">
+     <div class="box"><h3>Current corpus</h3><div class="cards" style="margin:0">
+       ${kpi(s.total_events.toLocaleString(),'Events','var(--cyan)')}${kpi(s.total_users,'Users')}${kpi(s.analyzed,'Scored')}</div>
+       <div class="hr"></div><button onclick="runAnalysis()">▶ Run analysis (batch)</button>
+       <button class="danger" style="margin-left:8px" onclick="resetData()">Clear all data</button></div>
+     <div class="box"><h3>Anomaly model</h3><div id="modelInfo2"></div>
+       <div class="hr"></div><button class="primary" onclick="trainModel()">🎓 Train / retrain model</button>
+       <span class="dim mono" style="font-size:11px;margin-left:8px">enables live scoring</span></div>
+   </div>
+   <div class="box" style="margin-top:16px"><h3>Available dataset adapters</h3>
+     ${ds.map(d=>`<div style="padding:10px 0;border-bottom:1px solid var(--border)"><b>${esc(d.name)}</b> <span class="chip" style="cursor:default">${esc(d.key)}</span><div class="muted" style="font-size:12px;margin-top:4px">${esc(d.description)}</div><div class="dim mono" style="font-size:11px;margin-top:3px">${esc(d.citation)}</div></div>`).join('')}
+   </div>`;
+  renderModelInfo(s.model);
+};
+function renderModelInfo(m){const el=document.getElementById('modelInfo2');if(!el)return;
+  el.innerHTML=m.fitted?`<div class="mono" style="line-height:1.9"><div><span class="led on"></span> trained ${esc(m.trained_at)}</div><div class="dim">${m.train_events.toLocaleString()} events · ${m.train_users} users · ${m.features} features</div><div class="dim">contamination ${m.contamination}</div></div>`:`<div><span class="led off"></span> <span class="muted">No trained model yet.</span></div>`;}
+async function genData(){toast('Generating…');await post('/api/generate',{users:+document.getElementById('synU').value,days:+document.getElementById('synD').value});await post('/api/analyze');toast('Synthetic data generated & analyzed');VIEWS.data();}
+async function uploadFile(){const f=document.getElementById('upFile').files[0];if(!f){toast('Choose a file');return}
+  const fd=new FormData();fd.append('file',f);const reset=document.getElementById('upReset').checked;
+  toast('Uploading '+f.name+'…');try{const r=await api('/api/ingest?reset='+reset,{method:'POST',body:fd});toast(`Ingested ${r.ingested} events from ${esc(r.filename)}`);VIEWS.data();}catch(e){toast('Ingest failed: '+e.message,true)}}
+async function loadCert(){const path=document.getElementById('certPath').value;if(!path){toast('Enter the CERT path');return}
+  const limit=+document.getElementById('certLimit').value||null;toast('Loading CERT…');
+  try{const r=await post('/api/dataset/load',{key:'cert',path,limit});toast(`Loaded ${r.ingested} events · ${r.users} users`);VIEWS.data();}catch(e){toast('Load failed: '+e.message,true)}}
+async function trainModel(){toast('Training model…');try{const r=await post('/api/train');toast('Model trained on '+r.model.train_events.toLocaleString()+' events');VIEWS.data();}catch(e){toast('Train failed: '+e.message,true)}}
+async function resetData(){if(!confirm('Delete ALL events, alerts and responses?'))return;await post('/api/generate',{users:0,days:0}).catch(()=>{});toast('Use Clear via CLI for full reset');}
+
+/* ---------- Detection Config ---------- */
+VIEWS.detections=async()=>{
+  const c=document.getElementById('content');const d=await api('/api/detections');const t=d.thresholds;
+  c.innerHTML=`
+   <div class="box" style="margin-bottom:16px"><h3>Active detectors</h3>
+     <table><thead><tr><th>Detector</th><th>Type</th><th>Max pts</th><th>Description</th></tr></thead><tbody>
+     ${d.detectors.map(x=>`<tr style="cursor:default"><td><b>${esc(x.name)}</b></td><td><span class="chip" style="cursor:default">${esc(x.type)}</span></td><td class="mono">${x.max_points}</td><td class="muted">${esc(x.detail)}</td></tr>`).join('')}
+     </tbody></table></div>
+   <div class="box"><h3>Thresholds & sensitivity</h3>
+     <div class="grid" style="grid-template-columns:1fr 1fr 1fr">
+       ${fld('Medium band','medium',t.medium)}${fld('High band','high',t.high)}${fld('Contamination','contamination',t.contamination,0.01)}
+       ${fld('Business start hr','business_start_hour',t.business_start_hour,1)}${fld('Business end hr','business_end_hour',t.business_end_hour,1)}${fld('Failed-login burst','failed_login_burst',t.failed_login_burst,1)}
+       ${fld('Data-exfil z-score','data_exfil_zscore',t.data_exfil_zscore,0.1)}${fld('New-geo penalty','new_geo_penalty',t.new_geo_penalty,1)}
+     </div>
+     <button class="primary" onclick="saveThresholds()">💾 Save & note</button>
+     <span class="dim mono" style="font-size:11px;margin-left:8px">re-run analysis to apply</span></div>`;
+};
+const fld=(label,key,val,step)=>`<label class="fld"><span>${label}</span><input data-th="${key}" type="number" step="${step||1}" value="${val}"></label>`;
+async function saveThresholds(){const th={};document.querySelectorAll('[data-th]').forEach(i=>th[i.dataset.th]=+i.value);
+  await post('/api/config',{thresholds:th});toast('Thresholds saved. Re-run analysis to apply.');}
+
+/* ---------- Settings ---------- */
+VIEWS.settings=async()=>{
+  const c=document.getElementById('content');const cfg=await api('/api/config');
+  c.innerHTML=`<div class="grid" style="grid-template-columns:1fr 1fr">
+    <div class="box"><h3>Organization</h3>
+      ${fldTxt('Organization name','org',cfg.organization)}
+      ${fldTxt('SIEM / SOAR webhook URL','webhook',cfg.webhook_url||'')}
+      <button class="primary" onclick="saveSettings()">💾 Save settings</button></div>
+    <div class="box"><h3>Deployment</h3>
+      <div class="mono" style="line-height:2;font-size:13px">
+        <div class="dim">DATA HOME</div>${esc(cfg.data_home)}
+        <div class="dim" style="margin-top:8px">MODEL PATH</div>${esc(cfg.model_path)}
+        <div class="dim" style="margin-top:8px">VERSION</div>Aegis UBA v{{ version }}</div>
+      <div class="hr"></div>
+      <a class="chip" href="/api/export" target="_blank">⬇ Export alerts (JSON)</a>
+      <a class="chip" href="/docs" target="_blank">⚙ API docs</a></div>
+  </div>`;
+};
+const fldTxt=(label,id,val)=>`<label class="fld"><span>${label}</span><input id="set_${id}" type="text" value="${esc(val)}"></label>`;
+async function saveSettings(){await post('/api/config',{organization:document.getElementById('set_org').value,webhook_url:document.getElementById('set_webhook').value});toast('Settings saved');document.getElementById('orgName').textContent=document.getElementById('set_org').value;}
+
+/* ---------- global ---------- */
+async function runAnalysis(){toast('Running ML + rule analysis…');try{const r=await post('/api/analyze');toast('Analysis complete · '+r.analyzed+' users scored');const v=location.hash.slice(1)||'overview';if(VIEWS[v])VIEWS[v]();}catch(e){toast(e.message,true)}}
+
+/* boot */
+try{
+  document.getElementById('content').innerHTML='<div class="dim mono">booting…</div>';
+  const initial=location.hash.slice(1);
+  go(TITLES[initial]?initial:'overview');
+}catch(err){_showErr('BOOT ERROR: '+err.message+'\n'+err.stack);}
 </script>
 </body>
 </html>

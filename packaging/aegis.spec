@@ -15,7 +15,8 @@ binaries = []
 hiddenimports = []
 
 for pkg in ("sklearn", "uvicorn", "fastapi", "starlette", "pydantic",
-            "pandas", "numpy", "scipy", "httpx", "anyio", "jinja2"):
+            "pandas", "numpy", "scipy", "httpx", "anyio", "jinja2",
+            "joblib", "multipart", "dateutil", "platformdirs"):
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b
