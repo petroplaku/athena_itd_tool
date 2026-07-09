@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aegis UBA — SOC Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2430;--border:#26303c;--text:#e6edf3;
+    --muted:#8b98a5;--low:#3fb950;--medium:#d29922;--high:#f85149;--critical:#ff4d4d;--accent:#58a6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  header{display:flex;justify-content:space-between;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:linear-gradient(120deg,#161b22,#0d1117);position:sticky;top:0;z-index:5}
+  header h1{margin:0;font-size:19px;letter-spacing:.3px}
+  header .org{color:var(--muted);font-size:13px}
+  .toolbar{display:flex;gap:10px;align-items:center}
+  button{cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:#04101f;border-color:var(--accent);font-weight:600}
+  main{padding:22px 28px;max-width:1320px;margin:0 auto}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .card .n{font-size:28px;font-weight:800}
+  .card .l{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:18px}
+  .box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .box h3{margin:0 0 12px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--panel2)}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+  .LOW{background:rgba(63,185,80,.15);color:var(--low)} .MEDIUM{background:rgba(210,153,34,.15);color:var(--medium)}
+  .HIGH{background:rgba(248,81,73,.15);color:var(--high)} .CRITICAL{background:rgba(255,77,77,.2);color:var(--critical)}
+  .bar{height:7px;background:#21262d;border-radius:6px;overflow:hidden;min-width:90px}
+  .bar>span{display:block;height:100%}
+  select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:20}
+  .overlay.open{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;width:min(720px,92vw);max-height:88vh;overflow:auto;padding:22px}
+  .modal h2{margin:0 0 4px}
+  .chip{display:inline-block;background:#1f2937;color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:5px 11px;margin:4px 6px 0 0;font-size:12px;cursor:pointer}
+  .chip:hover{border-color:var(--accent)}
+  ul.factors{padding-left:18px;margin:6px 0}
+  ul.factors li{margin-bottom:8px}
+  .muted{color:var(--muted)}
+  .evt{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+  .close{float:right;border:none;background:none;color:var(--muted);font-size:20px}
+  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--panel2);border:1px solid var(--accent);color:var(--text);padding:12px 16px;border-radius:10px;display:none;z-index:30}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🛡️ Aegis UBA <span class="muted" style="font-size:12px">v{{ version }}</span></h1>
+    <div class="org">{{ organization }} · Insider Threat &amp; User Behavior Analytics</div>
+  </div>
+  <div class="toolbar">
+    <button onclick="genData()">⚙ Generate demo data</button>
+    <button class="primary" onclick="runAnalysis()">▶ Run analysis</button>
+  </div>
+</header>
+
+<main>
+  <div class="cards" id="cards"></div>
+
+  <div class="grid">
+    <div class="box"><h3>Activity volume (events/day)</h3><canvas id="trend" height="120"></canvas></div>
+    <div class="box"><h3>Risk distribution</h3><canvas id="dist" height="120"></canvas></div>
+  </div>
+
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h3 style="margin:0">Users by risk</h3>
+      <div>
+        <span class="muted" style="font-size:12px">Min level</span>
+        <select id="minLevel" onchange="loadAlerts()">
+          <option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>User</th><th>Dept / Role</th><th>Risk</th><th>Level</th><th>Top factor</th></tr></thead>
+      <tbody id="alertRows"></tbody>
+    </table>
+    <div class="empty" id="emptyState" style="display:none">
+      No data yet — click <b>Generate demo data</b>, then <b>Run analysis</b>.
+    </div>
+  </div>
+</main>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const LEVELS = ["LOW","MEDIUM","HIGH","CRITICAL"];
+const COLORS = {LOW:"#3fb950",MEDIUM:"#d29922",HIGH:"#f85149",CRITICAL:"#ff4d4d"};
+let trendChart, distChart;
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2600);}
+function fmtBytes(n){const u=["B","KB","MB","GB","TB"];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return n.toFixed(1)+" "+u[i];}
+
+async function loadSummary(){
+  const s = await (await fetch('/api/summary')).json();
+  document.getElementById('cards').innerHTML = `
+    <div class="card"><div class="n">${s.total_events.toLocaleString()}</div><div class="l">Events</div></div>
+    <div class="card"><div class="n">${s.total_users}</div><div class="l">Users</div></div>
+    <div class="card"><div class="n" style="color:var(--critical)">${s.counts.CRITICAL}</div><div class="l">Critical</div></div>
+    <div class="card"><div class="n" style="color:var(--high)">${s.counts.HIGH}</div><div class="l">High</div></div>
+    <div class="card"><div class="n" style="color:var(--medium)">${s.counts.MEDIUM}</div><div class="l">Medium</div></div>
+    <div class="card"><div class="n" style="color:var(--low)">${s.counts.LOW}</div><div class="l">Low</div></div>`;
+  drawTrend(s.trend_labels, s.trend_values);
+  drawDist(s.counts);
+}
+
+function drawTrend(labels, values){
+  const ctx = document.getElementById('trend');
+  if(trendChart) trendChart.destroy();
+  if(!window.Chart) return;
+  trendChart = new Chart(ctx,{type:'line',data:{labels,datasets:[{data:values,borderColor:'#58a6ff',backgroundColor:'rgba(88,166,255,.15)',fill:true,tension:.3,pointRadius:0}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b98a5',maxTicksLimit:8},grid:{display:false}},y:{ticks:{color:'#8b98a5'},grid:{color:'#26303c'}}}}});
+}
+function drawDist(counts){
+  const ctx = document.getElementById('dist');
+  if(distChart) distChart.destroy();
+  if(!window.Chart) return;
+  distChart = new Chart(ctx,{type:'doughnut',data:{labels:LEVELS,datasets:[{data:LEVELS.map(l=>counts[l]),backgroundColor:LEVELS.map(l=>COLORS[l]),borderColor:'#161b22'}]},
+    options:{plugins:{legend:{position:'right',labels:{color:'#e6edf3'}}}}});
+}
+
+async function loadAlerts(){
+  const lvl = document.getElementById('minLevel').value;
+  const rows = await (await fetch('/api/alerts?min_level='+lvl)).json();
+  const tbody = document.getElementById('alertRows');
+  document.getElementById('emptyState').style.display = rows.length? 'none':'block';
+  tbody.innerHTML = rows.map(a=>{
+    const top = a.explanations.length? a.explanations[0].factor : '—';
+    return `<tr onclick="openUser('${a.user}')">
+      <td><b>${a.user}</b></td>
+      <td class="muted">${a.department} / ${a.role}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><span>${a.risk_score.toFixed(0)}</span>
+        <div class="bar"><span style="width:${a.risk_score}%;background:${COLORS[a.risk_level]}"></span></div></div></td>
+      <td><span class="badge ${a.risk_level}">${a.risk_level}</span></td>
+      <td class="muted">${top}</td></tr>`;
+  }).join('');
+}
+
+async function openUser(user){
+  const d = await (await fetch('/api/user/'+encodeURIComponent(user))).json();
+  const a = d.alert;
+  const factors = a.explanations.map(e=>`<li><b>${e.factor}</b> <span class="muted">(+${e.weight.toFixed(0)})</span><br><span class="muted">${e.detail}</span></li>`).join('');
+  const actions = a.recommended_actions.map(x=>`<span class="chip" onclick="respond('${a.user}','${mapAction(x)}','${x}')">${x}</span>`).join('');
+  const evts = d.events.slice().reverse().map(e=>`<tr><td class="evt">${e.timestamp.replace('T',' ').slice(0,19)}</td><td class="evt">${e.action}</td><td class="evt">${e.source_ip} ${e.country!=='US'?'· '+e.country:''}</td><td class="evt">${e.bytes?fmtBytes(e.bytes):''} ${e.resource||''}</td></tr>`).join('');
+  document.getElementById('modal').innerHTML = `
+    <button class="close" onclick="closeModal()">×</button>
+    <h2>${a.user} <span class="badge ${a.risk_level}">${a.risk_level}</span></h2>
+    <div class="muted">${a.department} · ${a.role} · ${a.event_count} events · window ${a.window_start.slice(0,10)} · risk <b style="color:${COLORS[a.risk_level]}">${a.risk_score.toFixed(0)}/100</b> · ML ${(a.ml_score*100).toFixed(0)}%</div>
+    <h3 style="margin-top:16px">Why flagged</h3><ul class="factors">${factors||'<li class="muted">No anomalous factors.</li>'}</ul>
+    <h3>Recommended response <span class="muted" style="font-size:11px">(click to dispatch — simulated)</span></h3><div>${actions}</div>
+    <h3 style="margin-top:16px">Recent activity (${d.event_total} total)</h3>
+    <table><thead><tr><th>Time</th><th>Action</th><th>Source</th><th>Detail</th></tr></thead><tbody>${evts}</tbody></table>`;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+
+function mapAction(rec){
+  rec=rec.toLowerCase();
+  if(rec.includes('lock'))return'lock_account';
+  if(rec.includes('revoke active')||rec.includes('session'))return'revoke_sessions';
+  if(rec.includes('mfa'))return'require_mfa';
+  if(rec.includes('block')||rec.includes('download')||rec.includes('usb'))return'disable_downloads';
+  return'notify_soc';
+}
+async function respond(user,action,label){
+  const r = await (await fetch('/api/respond',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({user,action,reason:label})})).json();
+  toast(`${r.mode}: ${action} → ${user}`);
+}
+async function genData(){
+  toast('Generating demo data…');
+  await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({users:30,days:30})});
+  await runAnalysis();
+}
+async function runAnalysis(){
+  toast('Running ML + rule analysis…');
+  const r = await fetch('/api/analyze',{method:'POST'});
+  if(!r.ok){toast('Generate data first.');return;}
+  await refresh();
+  toast('Analysis complete.');
+}
+async function refresh(){await loadSummary();await loadAlerts();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+refresh();
+</script>
+</body>
+</html>
