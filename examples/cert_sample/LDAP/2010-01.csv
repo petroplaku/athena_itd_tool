@@ -1,0 +1,6 @@
+employee_name,user_id,email,role,business_unit,functional_unit,department,team,supervisor
+Cmp2946,CMP2946,cmp2946@dtaa.com,ITAdmin,IT,IT,IT,IT-1,BOSS0001
+Hnd1350,HND1350,hnd1350@dtaa.com,Salesman,Sales,Sales,Sales,Sales-1,BOSS0001
+Moh0273,MOH0273,moh0273@dtaa.com,Accountant,Finance,Finance,Finance,Finance-1,BOSS0001
+Btr0032,BTR0032,btr0032@dtaa.com,Developer,Engineering,Engineering,Engineering,Engineering-1,BOSS0001
+Klm0087,KLM0087,klm0087@dtaa.com,Recruiter,HR,HR,HR,HR-1,BOSS0001

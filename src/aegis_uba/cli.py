@@ -22,6 +22,7 @@ from rich import box
 
 from aegis_uba import __version__
 from aegis_uba.config import get_config
+from aegis_uba.datasets import REGISTRY, detect_cert_release, list_datasets, load_dataset
 from aegis_uba.detect import Analyzer
 from aegis_uba.ingest import generate_synthetic, load_events_from_file, sniff_format
 from aegis_uba.models import RiskLevel
@@ -120,6 +121,93 @@ def ingest(
         raise typer.Exit(code=1)
     console.print(f"[green]✓[/] Ingested [bold]{n}[/] events "
                   f"([dim]{detected}[/]) from [bold]{path.name}[/].")
+
+
+@app.command()
+def train(
+    contamination: Optional[float] = typer.Option(None, help="Override anomaly fraction for training."),
+) -> None:
+    """Train the anomaly model on stored events and persist it for live scoring."""
+    cfg = get_config()
+    store = _store()
+    events = store.iter_events()
+    if not events:
+        console.print("[yellow]⚠ No events. Ingest or load a dataset first.[/]")
+        raise typer.Exit(code=1)
+    if contamination is not None:
+        cfg.thresholds.contamination = contamination
+    with console.status("[cyan]Training Isolation Forest + learning baselines…"):
+        analyzer = Analyzer(cfg.thresholds).fit(events)
+        analyzer.save(cfg.model_path)
+    info = analyzer.info()
+    console.print(f"[green]✓[/] Model trained on [bold]{info['train_events']}[/] events / "
+                  f"[bold]{info['train_users']}[/] users → [dim]{cfg.model_path}[/]")
+    console.print(f"[dim]features={info['features']} contamination={info['contamination']}[/]")
+
+
+dataset_app = typer.Typer(help="Manage and load real-world datasets.", no_args_is_help=True)
+app.add_typer(dataset_app, name="dataset")
+
+
+@dataset_app.command("list")
+def dataset_list() -> None:
+    """List datasets Aegis can ingest for training / assessment."""
+    t = Table(box=box.ROUNDED, header_style="bold cyan")
+    t.add_column("Key"); t.add_column("Name"); t.add_column("Source"); t.add_column("Notes", style="dim")
+    for d in list_datasets():
+        t.add_row(d.key, d.name, d.source, d.description[:60] + "…")
+    console.print(t)
+
+
+@dataset_app.command("info")
+def dataset_info(key: str = typer.Argument(..., help="Dataset key (e.g. cert).")) -> None:
+    """Show details and citation for a dataset."""
+    d = REGISTRY.get(key.lower())
+    if not d:
+        console.print(f"[red]Unknown dataset:[/] {key}")
+        raise typer.Exit(code=1)
+    console.print(Panel.fit(
+        f"[bold]{d.name}[/]\n[dim]{d.source}[/]\n\n{d.description}\n\n"
+        f"[cyan]URL:[/] {d.url}\n[cyan]Cite:[/] {d.citation}",
+        border_style="cyan", title=d.key))
+
+
+@dataset_app.command("inspect")
+def dataset_inspect(path: Path = typer.Argument(..., exists=True, help="CERT release directory.")) -> None:
+    """Report which CERT CSVs are present in a directory."""
+    rel = detect_cert_release(path)
+    console.print(f"[bold]{rel['path']}[/]")
+    console.print(f"  sources present: [green]{', '.join(rel['present']) or 'none'}[/]")
+    console.print(f"  LDAP snapshots: {len(rel['ldap_snapshots'])}")
+
+
+@dataset_app.command("load")
+def dataset_load(
+    key: str = typer.Argument(..., help="Dataset key (cert | synthetic)."),
+    path: Optional[Path] = typer.Option(None, help="Dataset directory (required for cert)."),
+    limit: Optional[int] = typer.Option(None, help="Cap rows per source (cert)."),
+    include_http: bool = typer.Option(False, "--http", help="Include high-volume http.csv (cert)."),
+    users: int = typer.Option(30, help="Users (synthetic)."),
+    days: int = typer.Option(30, help="Days (synthetic)."),
+    reset: bool = typer.Option(True, "--reset/--append", help="Clear existing events first."),
+) -> None:
+    """Load a dataset into the local store, ready to train / analyze."""
+    store = _store()
+    if reset:
+        store.reset()
+    kwargs: dict = {}
+    if key.lower() == "cert":
+        if not path:
+            console.print("[red]--path is required for the cert dataset.[/]")
+            raise typer.Exit(code=1)
+        kwargs = {"path": path, "limit_per_source": limit, "include_http": include_http}
+    else:
+        kwargs = {"users": users, "days": days}
+    with console.status(f"[cyan]Loading dataset '{key}'…"):
+        events = load_dataset(key, **kwargs)
+        n = store.add_events(events)
+    console.print(f"[green]✓[/] Loaded [bold]{n}[/] events from [bold]{key}[/] "
+                  f"([dim]{len(store.distinct_users())} users[/]).")
 
 
 @app.command()
@@ -284,6 +372,61 @@ def gui(
 ) -> None:
     """Launch the dashboard and open it in your browser (desktop-app style)."""
     serve(host=host, port=port, open_browser=True, reload=False)
+
+
+@app.command()
+def monitor(
+    eps: float = typer.Option(6.0, help="Simulated events per second."),
+    inject_prob: float = typer.Option(0.08, help="Probability of injecting a threat per tick."),
+    duration: int = typer.Option(0, help="Seconds to run (0 = until Ctrl+C)."),
+) -> None:
+    """Run the real-time monitor in the terminal (live feed + rolling alerts)."""
+    import time
+    from rich.live import Live
+    from rich.layout import Layout
+    from aegis_uba.stream import ENGINE
+
+    cfg = get_config()
+    store = _store()
+    if store.event_count() == 0:
+        console.print("[yellow]No data — generating a warmup corpus…[/]")
+    _banner()
+    ENGINE.start(eps=eps, inject_prob=inject_prob)
+    console.print(f"[green]➜[/] Live monitor running [dim](eps={eps}, inject={inject_prob}) — Ctrl+C to stop[/]\n")
+
+    def render() -> Table:
+        t = Table(box=box.SIMPLE, header_style="bold cyan",
+                  title="[bold]Aegis UBA — Live Telemetry[/]")
+        t.add_column("Time", style="dim"); t.add_column("User", style="cyan")
+        t.add_column("Action"); t.add_column("Detail", style="dim")
+        for item in reversed(ENGINE.recent_feed(16)):
+            if item.get("type") == "event":
+                t.add_row(item["ts"][11:19], item["user"], item["action"],
+                          f"{item['source_ip']} {('· '+item['country']) if item.get('country') not in (None,'US') else ''}")
+            elif item.get("type") == "inject":
+                t.add_row(item["ts"][11:19], item["user"], "[red]⚡ INJECT[/]",
+                          f"[red]scenario: {item['scenario']}[/]")
+            elif item.get("type") == "alert":
+                t.add_row("", f"[bold]{item['user']}[/]",
+                          f"[{_LEVEL_STYLE[item['risk_level']]}]{item['risk_level']}[/]",
+                          f"{item['top_factor']} · {item['risk_score']:.0f}")
+        return t
+
+    try:
+        start = time.time()
+        with Live(render(), console=console, refresh_per_second=4) as live:
+            while True:
+                time.sleep(0.4)
+                live.update(render())
+                if duration and time.time() - start >= duration:
+                    break
+    except KeyboardInterrupt:
+        pass
+    finally:
+        st = ENGINE.stop()
+        console.print(f"\n[green]✓[/] Stopped. Streamed [bold]{st['events_emitted']}[/] events, "
+                      f"injected [bold]{st['anomalies_injected']}[/] threats. "
+                      f"Run [cyan]aegis alerts[/] to review.")
 
 
 @app.command()

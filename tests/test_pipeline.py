@@ -137,3 +137,65 @@ def test_empty_input_is_safe():
 def test_event_action_coercion():
     e = Event(timestamp=datetime.now(), user="x", action="NOT_A_REAL_ACTION")
     assert e.action == Action.OTHER
+
+
+# --- upgraded platform: train / persistence / datasets / stream -----------
+def test_model_train_save_load_score(tmp_path, events_and_truth):
+    events, planted = events_and_truth
+    analyzer = Analyzer(Thresholds()).fit(events)
+    assert analyzer.is_fitted
+    path = tmp_path / "model.joblib"
+    analyzer.save(path)
+    assert path.exists()
+
+    loaded = Analyzer.load(path)
+    assert loaded.info()["fitted"] is True
+    alerts = loaded.score(events)
+    by_user = {a.user: a for a in alerts}
+    # planted scenarios still detected when scoring against the persisted model
+    caught = sum(by_user[p["user"]].risk_level.rank >= RiskLevel.MEDIUM.rank for p in planted)
+    assert caught == len(planted)
+
+
+def test_cert_loader(tmp_path):
+    from aegis_uba.datasets import detect_cert_release, load_cert
+    # minimal CERT-format release
+    (tmp_path / "logon.csv").write_text(
+        "id,date,user,pc,activity\n"
+        "{1},01/04/2010 09:00:00,AAA0001,PC-1,Logon\n"
+        "{2},01/04/2010 17:00:00,AAA0001,PC-1,Logoff\n", encoding="utf-8")
+    (tmp_path / "device.csv").write_text(
+        "id,date,user,pc,activity\n{3},01/04/2010 09:30:00,AAA0001,PC-1,Connect\n",
+        encoding="utf-8")
+    ldap = tmp_path / "LDAP"; ldap.mkdir()
+    (ldap / "2010-01.csv").write_text(
+        "employee_name,user_id,email,role,business_unit,functional_unit,department,team,supervisor\n"
+        "Aaa,AAA0001,aaa@dtaa.com,Engineer,Eng,Eng,Engineering,E1,BOSS\n", encoding="utf-8")
+
+    rel = detect_cert_release(tmp_path)
+    assert "logon" in rel["present"] and "device" in rel["present"]
+    events = load_cert(tmp_path)
+    assert any(e.action == Action.LOGIN for e in events)
+    assert any(e.action == Action.DATA_TRANSFER for e in events)
+    assert all(e.department == "Engineering" for e in events)  # LDAP enrichment
+
+
+def test_dataset_registry():
+    from aegis_uba.datasets import REGISTRY, load_dataset
+    assert "cert" in REGISTRY and "synthetic" in REGISTRY
+    events = load_dataset("synthetic", users=8, days=8)
+    assert len(events) > 0
+
+
+def test_live_engine_start_stop():
+    import time
+    from aegis_uba.stream import LiveEngine
+    eng = LiveEngine()
+    q = eng.subscribe()
+    eng.start(eps=30, inject_prob=0.4, warmup_users=12, warmup_days=10)
+    time.sleep(2.5)
+    st = eng.stop()
+    assert st["events_emitted"] > 0
+    assert not eng.status()["running"]
+    types = {i.get("type") for i in eng.recent_feed(200)}
+    assert "event" in types

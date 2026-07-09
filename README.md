@@ -2,106 +2,154 @@
 
 Aegis UBA is a cross-platform (**Linux · Windows · macOS**) platform that detects
 **compromised accounts and malicious insiders** by learning each user's normal
-behavior and flagging deviations. It ships with both a **professional CLI** and a
-**web dashboard GUI**, backed by a machine-learning + rules detection engine that
-produces **explainable, SOC-ready risk scores**.
+behavior and flagging deviations in **real time**. It ships with a professional
+**CLI** and a modern **web SOC console**, backed by a trainable machine-learning
++ rules engine that produces **explainable, prioritized risk scores** — and can
+run continuously against live telemetry or public benchmark datasets.
 
 > Traditional monitoring misses the subtle behavioral changes that precede data
 > theft, sabotage and privilege abuse. Aegis continuously baselines user activity
-> (logins, file access, data transfer, privilege use, geography) and surfaces the
-> handful of users who genuinely warrant an analyst's attention — with a clear
-> explanation of *why*.
+> (logins, file access, data transfer, privilege use, geography), scores every
+> user against a trained model, and surfaces the handful who warrant an analyst's
+> attention — each with a clear explanation of *why* and a recommended response.
 
 ---
 
-## ✨ Features
+## ✨ What's inside
 
-| Capability | What it does |
+| Capability | Detail |
 |---|---|
-| **Behavioral baselines** | Per-user profiles of normal logins, file access, data volume, hosts, IPs and geography. |
-| **AI anomaly detection** | Unsupervised **Isolation Forest** over population-wide behavior vectors, robust-scaled. |
-| **Rule detectors** | Data exfiltration, off-hours access, failed-login bursts, privilege escalation, impossible travel / new geography. |
-| **Risk scoring** | Weighted 0–100 score with `LOW / MEDIUM / HIGH / CRITICAL` bands, prioritized for SOC triage. |
-| **Explainability** | Every alert lists the contributing factors + human-readable detail for HR, compliance and SOC. |
-| **Automated response** | Simulated (safe-by-default) lock / revoke-session / MFA / disable-download actions, with an audit trail and SIEM/SOAR **webhook** emitter. |
-| **Reporting** | Self-contained **HTML** and **JSON** reports. |
-| **Web dashboard GUI** | FastAPI dashboard with charts, a risk table, user drill-down and one-click response. |
-| **Cross-platform CLI** | Single `aegis` command; ships as a Python package or a standalone binary per OS. |
-| **Flexible ingest** | Synthetic generator, generic CSV/JSON/JSONL, and Linux `auth.log`. Source-agnostic schema. |
+| **Trainable ML model** | Isolation Forest over 16-feature user-day vectors, **fit → persisted (joblib) → reused** to score live/streaming data. |
+| **Rule detectors + baselines** | Data exfiltration, off-hours access, failed-login bursts, privilege escalation, impossible travel — each scored against the user's own learned baseline. |
+| **Explainable risk scoring** | Weighted 0–100 score, `LOW/MEDIUM/HIGH/CRITICAL` bands, per-factor explanations for SOC / HR / compliance. |
+| **⚡ Real-time monitoring** | Background engine ingests live telemetry, re-scores the recent window continuously, and raises threat notifications over Server-Sent-Events. |
+| **📊 Web SOC console** | 8-view cybersecurity dashboard: Overview, Live Monitor, Users, Alerts, Response Log, Data & Model, Detection Config, Settings. |
+| **🎓 Real datasets** | First-class adapter for the **CMU CERT Insider Threat** benchmark (logon/device/email/file/http/LDAP) + a synthetic enterprise generator. |
+| **Flexible ingest** | CSV / JSON / JSONL / Linux `auth.log`, drag-and-drop upload, or dataset loaders — all normalized to one schema. |
+| **Automated response** | Simulated (safe-by-default) lock / revoke-session / MFA / disable-download, audit trail, and SIEM/SOAR **webhook**. |
+| **Tunable detection** | Thresholds, sensitivity and contamination editable from the GUI or `config.json`. |
+| **Reporting & export** | Standalone HTML + JSON reports and a JSON alert export API. |
+| **Ships anywhere** | Python package, `python -m aegis_uba`, or a standalone per-OS binary (PyInstaller + CI). |
 
 ---
 
 ## 🚀 Quick start
 
 ```bash
-# 1. Install (Python 3.10+)
 pip install .
-
-# 2. Initialize local state (creates an OS-appropriate data directory)
 aegis init
 
-# 3a. Try it instantly with realistic synthetic data (with planted threats)
+# Option A — instant demo with planted insider scenarios
 aegis generate --users 30 --days 30
-
-# 3b. …or ingest your own data
-aegis ingest examples/sample_events.csv       # CSV / JSON / JSONL
-aegis ingest /var/log/auth.log                # Linux auth log
-
-# 4. Detect + score every user (and simulate response for HIGH/CRITICAL)
 aegis analyze --respond
 
-# 5. Investigate
-aegis alerts                 # ranked table
-aegis show carol.diaz        # full explainable finding for one user
-aegis report                 # HTML + JSON reports
+# Option B — train on a real dataset (CMU CERT) and score it
+aegis dataset load cert --path /path/to/cert/r4.2   # or: examples/cert_sample
+aegis train                                          # persists the model
+aegis analyze
 
-# 6. Launch the web dashboard GUI (opens your browser)
-aegis serve --open
+# Investigate & report
+aegis alerts
+aegis show <user>
+aegis report
+
+# Real-time: terminal live monitor …
+aegis monitor --eps 8 --inject-prob 0.05
+
+# … or the full web SOC console (opens your browser)
+aegis serve --open        # then use the "Live Monitor" view
 ```
 
-`make demo` runs steps 2–5 in one shot; `make serve` launches the dashboard.
+`make demo` runs the batch flow; `make serve` launches the console.
 
 ---
 
-## 🖥️ The web dashboard (GUI)
+## 📊 The web SOC console
 
-`aegis serve --open` (or `aegis gui`) starts a local FastAPI server and opens a
-dark, SOC-style dashboard at <http://127.0.0.1:8000>:
+`aegis serve --open` (or `aegis gui`) serves a dark, modern cybersecurity
+dashboard at <http://127.0.0.1:8000> with a sidebar of eight views:
 
-- KPI cards (events, users, risk-band counts)
-- Activity-volume trend + risk-distribution charts
-- A **users-by-risk** table with inline risk bars and severity badges
-- Click any user for a **drill-down**: factors, recommended actions (one-click,
-  simulated), and a tail of their recent raw activity
+| View | What you can do |
+|---|---|
+| **Overview** | KPI cards, activity-trend & risk-distribution charts, model status, top critical users, global threat level. |
+| **⚡ Live Monitor** | Start/stop the real-time engine (tunable EPS + injection rate), watch a **live event stream** and **threat notifications** as they're detected, with pop toasts for HIGH/CRITICAL. |
+| **Users** | Searchable, department- and level-filterable risk-ranked workforce; click any user to investigate. |
+| **Alerts** | Explainable alert cards with contributing factors and **one-click (simulated) response** actions. |
+| **Response Log** | Full audit trail of every dispatched action (simulated / enforced). |
+| **Data & Model** | Generate synthetic data, **upload logs**, **load the CERT dataset**, inspect the corpus, and **train / retrain** the model. |
+| **Detection Config** | Catalogue of active detectors with weights, and editable thresholds / sensitivity. |
+| **Settings** | Organization name, SIEM/SOAR webhook, deployment paths, JSON export, API docs. |
 
-Everything the GUI shows is also available as JSON under `/api/*`, so the same
-backend can feed a SIEM or a future native client.
+Every view is backed by the JSON API under `/api/*` (see `/docs`), so the same
+backend can drive a SIEM integration or automation.
+
+---
+
+## ⚡ Real-time monitoring
+
+The live engine (`aegis_uba/stream.py`) simulates a continuous stream of
+enterprise telemetry (the kind a SIEM/EDR forwards), persists it, and every few
+seconds re-scores the recent window against the **trained model**, publishing
+raw events and detected findings to subscribers:
+
+```
+collector ─► normalize ─► store ─┬─► live feed (SSE)        ─► dashboard / CLI
+                                 └─► incremental scoring    ─► threat alerts + toasts
+```
+
+In production you replace the `_produce()` simulator with a real collector
+(tailing logs / consuming a bus); everything downstream — scoring, alerting,
+response — is identical. Drive it from the **Live Monitor** view, the
+`aegis monitor` CLI, or the `/api/stream/*` endpoints.
+
+---
+
+## 🎓 Datasets & model training
+
+Aegis trains on realistic data so live assessment is meaningful.
+
+- **CMU CERT Insider Threat Test Dataset** — the standard benchmark. Download a
+  release (r4.2 / r5.2 / r6.2) from
+  [kilthub.cmu.edu](https://kilthub.cmu.edu/articles/dataset/Insider_Threat_Test_Dataset/12841247)
+  (DOI `10.1184/R1/12841247`), extract it, and:
+  ```bash
+  aegis dataset inspect /path/to/cert/r4.2      # see which CSVs are present
+  aegis dataset load cert --path /path/to/cert/r4.2 --limit 200000
+  aegis train && aegis analyze
+  ```
+  The adapter maps `logon/device/email/file/http` + `LDAP` into the Aegis schema,
+  with department/role enrichment and external-recipient egress flags. A tiny
+  CERT-format sample is bundled at `examples/cert_sample/` (with a planted
+  insider) so you can try the whole flow offline.
+
+- **Synthetic enterprise** — `aegis dataset load synthetic` (or `aegis generate`)
+  produces deterministic org telemetry with five planted insider scenarios;
+  ideal for demos, tests and threshold calibration.
+
+`aegis train` fits the Isolation Forest, learns per-user baselines, and persists
+the model (`model.joblib`). The live engine and `aegis analyze` reuse it.
 
 ---
 
 ## 🧠 How detection works
 
 ```
- events ──► feature engineering ──► ┌───────────────────────────┐
- (per user/day vectors)            │  Isolation Forest (ML)     │──┐
-                                   └───────────────────────────┘  │  weighted
-                                   ┌───────────────────────────┐  ├─► risk 0–100 ─► band ─► alert
-                                   │  rule detectors + baseline │──┘   + explanations
-                                   └───────────────────────────┘      + recommended response
+ events ─► feature engineering ─► ┌───────────────────────────┐
+ (per user/day vectors)          │  Isolation Forest (trained)│──┐  weighted
+                                 └───────────────────────────┘  ├─► risk 0–100 ─► band ─► alert
+                                 ┌───────────────────────────┐  │   + explanations
+                                 │ rule detectors + baselines │──┘   + recommended response
+                                 └───────────────────────────┘
 ```
 
-1. **Feature engineering** (`features.py`) summarizes each user's day into a
-   16-dimensional behavior vector (login counts, failed-login ratio, bytes
-   moved, distinct hosts/IPs/countries, after-hours ratio, privilege use, …).
-2. **ML** (`detect.py`) trains an Isolation Forest across the whole population and
-   converts each vector's anomaly score to a 0–1 severity.
-3. **Rules** compare the user against **their own baseline** (e.g. bytes moved in
-   σ over their normal) so a naturally data-heavy role isn't perpetually flagged.
-4. **Scoring** blends ML + rule contributions into a 0–100 score, bands it, and
-   records the top contributing factors as the alert's explanation.
+Rules compare each user against **their own learned baseline** (e.g. bytes moved
+in σ over their normal), so a data-heavy role isn't perpetually flagged. The
+analyzer evaluates a short **monitoring window** per user and reports their worst
+day, so a benign end-of-day spill-over can't mask a real anomaly.
 
-The analyzer evaluates a short **monitoring window** per user and reports their
-worst day, so a benign end-of-day spill-over can't mask a real anomaly.
+**Validated:** on the synthetic benchmark the engine catches **100 % of planted
+insider scenarios** with **zero HIGH+ false positives** across seeds, and the
+CERT sample's planted insider surfaces as HIGH.
 
 ---
 
@@ -110,103 +158,82 @@ worst day, so a benign end-of-day spill-over can't mask a real anomaly.
 | Command | Description |
 |---|---|
 | `aegis init` | Initialize config + database. |
-| `aegis generate` | Generate synthetic activity with planted threat scenarios. |
-| `aegis ingest <file>` | Ingest CSV / JSON / `auth.log` (auto-detected). |
-| `aegis analyze [--respond] [--force]` | Run ML + rules, score users, store alerts. |
-| `aegis alerts [--min-level]` | List alerts, highest risk first. |
-| `aegis show <user>` | Full explainable finding for a user. |
-| `aegis respond <user> --action …` | Dispatch a single (simulated) response. |
-| `aegis responses` | Show the response audit trail. |
-| `aegis report [--out DIR]` | Generate HTML + JSON reports. |
-| `aegis serve [--open] / aegis gui` | Launch the web dashboard. |
-| `aegis reset` | Delete all local data. |
-| `aegis version` | Version + data-path info. |
+| `aegis generate` | Synthetic activity with planted threats. |
+| `aegis dataset list / info / inspect / load` | Manage & load real datasets (CERT, synthetic). |
+| `aegis ingest <file>` | Ingest CSV / JSON / `auth.log`. |
+| `aegis train` | Train & persist the anomaly model for live scoring. |
+| `aegis analyze [--respond]` | Score users, store explainable alerts. |
+| `aegis monitor` | Real-time terminal monitor (live feed + rolling alerts). |
+| `aegis alerts / show <user>` | Review findings. |
+| `aegis respond <user> --action …` | Dispatch a (simulated) response. |
+| `aegis report` | HTML + JSON reports. |
+| `aegis serve [--open] / aegis gui` | Launch the web SOC console. |
+| `aegis reset` | Clear all local data. |
 
-Run `aegis --help` or `aegis <command> --help` for full options.
+Run `aegis --help` or `aegis <cmd> --help` for options.
 
 ---
 
-## 🔌 Integrations & configuration
+## 🔌 Configuration & integrations
 
 State lives in an OS-appropriate directory (override with `AEGIS_HOME`):
-
-- **Linux** `~/.local/share/aegis-uba`
-- **macOS** `~/Library/Application Support/aegis-uba`
-- **Windows** `%LOCALAPPDATA%\aegis-uba`
-
-`config.json` there controls detection thresholds, the organization name, and a
-`webhook_url`. Set the webhook to forward every response action as JSON to
-Splunk / Microsoft Sentinel / ELK / a generic SOAR endpoint.
+Linux `~/.local/share/aegis-uba`, macOS `~/Library/Application Support/aegis-uba`,
+Windows `%LOCALAPPDATA%\aegis-uba`. `config.json` holds detection thresholds,
+organization name and a `webhook_url` (forwards every response action as JSON to
+Splunk / Sentinel / ELK / a generic SOAR endpoint). All of it is editable from
+the GUI's **Detection Config** and **Settings** views.
 
 ### Ingest schema
-
-CSV/JSON fields are matched case-insensitively with common aliases. The useful
-columns are: `timestamp, user, action, host, source_ip, resource, bytes,
-success, department, role, country`. Only `timestamp` and `user` are required.
-`action` is normalized to a known verb (`login`, `failed_login`, `file_download`,
-`data_transfer`, `privilege_escalation`, `config_change`, …).
+Fields are matched case-insensitively with common aliases:
+`timestamp, user, action, host, source_ip, resource, bytes, success,
+department, role, country` (only `timestamp` + `user` required).
 
 ---
 
 ## 🛡️ Safety model
 
-Automated-response actions are **simulated by default**: they are written to the
-audit trail and optionally forwarded to your webhook, but they do **not** modify
-real accounts. This makes Aegis safe to run in demos, evaluations and labs. Real
-enforcement is gated behind an explicit `--force` flag so it can only be enabled
-deliberately, per your organization's policy.
+Response actions are **simulated by default** — recorded to the audit trail and
+optionally forwarded to your webhook, but they do **not** modify real accounts.
+Safe for demos, evaluations and labs. Real enforcement is gated behind an
+explicit `--force` flag, per your organization's policy.
 
 ---
 
 ## 📦 Standalone binaries (no Python required)
 
-Build a single self-contained executable for the current OS:
-
 ```bash
-# Linux / macOS
-bash packaging/build.sh          # -> dist/aegis  + release/aegis-<os>-<arch>.tar.gz
-
-# Windows (PowerShell)
-powershell -ExecutionPolicy Bypass -File packaging\build.ps1   # -> dist\aegis.exe
+bash packaging/build.sh                                         # Linux / macOS
+powershell -ExecutionPolicy Bypass -File packaging\build.ps1    # Windows
 ```
 
-The included **GitHub Actions** workflow (`.github/workflows/build.yml`) runs the
-test suite on Linux/macOS/Windows × Python 3.10/3.12 and publishes a binary
-artifact for each OS on every push.
+The bundled **GitHub Actions** workflow tests on Linux/macOS/Windows ×
+Python 3.10/3.12 and publishes a per-OS binary artifact on every push.
 
 ---
 
 ## 🧪 Development
 
 ```bash
-make dev      # editable install with dev extras
-make test     # pytest
-make lint     # ruff
+make dev && make test && make lint
 ```
 
----
-
-## 🗂️ Project layout
+## 🗂️ Layout
 
 ```
 src/aegis_uba/
-├── cli.py              # Typer CLI (Linux/Windows/macOS)
-├── config.py           # cross-platform paths + tunable thresholds
-├── models.py           # Event / Alert / Explanation (pydantic)
-├── storage.py          # SQLite persistence (stdlib)
-├── features.py         # per-user/day feature engineering
-├── detect.py           # Isolation Forest + rules + risk scoring
-├── response.py         # simulated response + webhook emitter
-├── ingest/             # synthetic generator + CSV/JSON/auth.log loaders
-├── report/             # HTML + JSON report generation (+ template)
-└── web/                # FastAPI dashboard (server + template)
-packaging/              # PyInstaller spec + build scripts (build.sh / build.ps1)
-examples/               # sample CSV + auth.log
-tests/                  # pytest suite (detection recall, FP rate, IO, reports)
+├── cli.py            # Typer CLI (train, dataset, monitor, serve, …)
+├── detect.py         # trainable Isolation Forest + rules + scoring + persistence
+├── stream.py         # real-time engine (SSE feed, incremental scoring)
+├── datasets/         # CERT adapter + dataset registry
+├── ingest/           # synthetic generator + CSV/JSON/auth.log loaders
+├── features.py       # per-user/day feature engineering
+├── response.py       # simulated response + webhook
+├── report/           # HTML + JSON reporting
+├── storage.py        # SQLite persistence
+└── web/              # FastAPI + SOC-console SPA (server + dashboard.html)
+packaging/            # PyInstaller spec + build scripts
+examples/             # sample CSV, auth.log, and a CERT-format sample
+tests/                # pytest suite
 ```
 
----
-
-## 📄 License
-
-MIT — see [LICENSE](LICENSE).
+## 📄 License — MIT (see [LICENSE](LICENSE)).
