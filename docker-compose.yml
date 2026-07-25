@@ -1,0 +1,49 @@
+# ATHENA ITD — reference production compose stack.
+#   docker compose up -d
+# The app runs behind Caddy, which terminates TLS (auto-HTTPS) and forwards
+# X-Forwarded-* so the app emits correct HSTS. State persists in the named volume.
+services:
+  athena:
+    build: .
+    image: athena-itd:3.1.0
+    restart: unless-stopped
+    environment:
+      # Require sign-in (accounts + RBAC) in production. See SECURITY.md.
+      ATHENA_AUTH_ENABLED: "true"
+      # First-admin bootstrap on first start (rotate the password after login):
+      ATHENA_ADMIN_USER: "${ATHENA_ADMIN_USER:-admin}"
+      ATHENA_ADMIN_PASSWORD: "${ATHENA_ADMIN_PASSWORD:?set ATHENA_ADMIN_PASSWORD in your .env}"
+      # Machine-to-machine key for SIEM/SOAR automation (generate a strong value):
+      ATHENA_API_KEY: "${ATHENA_API_KEY:?set ATHENA_API_KEY in your .env}"
+      ATHENA_ORG: "${ATHENA_ORG:-Your Organization}"
+      # Example SIEM forwarding (optional):
+      # ATHENA_SPLUNK_HEC_URL: "https://splunk:8088/services/collector"
+      # ATHENA_SPLUNK_HEC_TOKEN: "${SPLUNK_HEC_TOKEN}"
+    volumes:
+      - athena-data:/data
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/ready').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - athena
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  athena-data:
+  caddy-data:
+  caddy-config:

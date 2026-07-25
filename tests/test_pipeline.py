@@ -1,4 +1,4 @@
-"""End-to-end and unit tests for the Aegis UBA pipeline."""
+"""End-to-end and unit tests for the ATHENA ITD pipeline."""
 from __future__ import annotations
 
 import json
@@ -6,13 +6,13 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from aegis_uba.config import Config, Thresholds
-from aegis_uba.detect import Analyzer
-from aegis_uba.ingest import generate_synthetic, load_events_from_file
-from aegis_uba.models import Action, Event, RiskLevel
-from aegis_uba.report import render_html_report, write_reports
-from aegis_uba.response import ResponseAction, auto_respond, dispatch
-from aegis_uba.storage import Store
+from athena_itd.config import Config, Thresholds
+from athena_itd.detect import Analyzer
+from athena_itd.ingest import generate_synthetic, load_events_from_file
+from athena_itd.models import Action, Event, RiskLevel
+from athena_itd.report import render_html_report, write_reports
+from athena_itd.response import ResponseAction, auto_respond, dispatch
+from athena_itd.storage import Store
 
 
 @pytest.fixture()
@@ -103,7 +103,7 @@ def test_report_html_and_json(tmp_path, events_and_truth):
     cfg = Config(home=tmp_path)
     cfg.ensure_dirs()
     html = render_html_report(alerts, cfg)
-    assert "Aegis UBA" in html and "Insider Threat" in html
+    assert "ATHENA ITD" in html and "Insider Threat" in html
     paths = write_reports(alerts, cfg, tmp_path)
     assert paths["html"].exists() and paths["json"].exists()
     data = json.loads(paths["json"].read_text())
@@ -158,7 +158,7 @@ def test_model_train_save_load_score(tmp_path, events_and_truth):
 
 
 def test_cert_loader(tmp_path):
-    from aegis_uba.datasets import detect_cert_release, load_cert
+    from athena_itd.datasets import detect_cert_release, load_cert
     # minimal CERT-format release
     (tmp_path / "logon.csv").write_text(
         "id,date,user,pc,activity\n"
@@ -181,7 +181,7 @@ def test_cert_loader(tmp_path):
 
 
 def test_dataset_registry():
-    from aegis_uba.datasets import REGISTRY, load_dataset
+    from athena_itd.datasets import REGISTRY, load_dataset
     assert "cert" in REGISTRY and "synthetic" in REGISTRY
     events = load_dataset("synthetic", users=8, days=8)
     assert len(events) > 0
@@ -189,9 +189,10 @@ def test_dataset_registry():
 
 def test_live_engine_start_stop():
     import time
-    from aegis_uba.stream import LiveEngine
+
+    from athena_itd.stream import LiveEngine
     eng = LiveEngine()
-    q = eng.subscribe()
+    eng.subscribe()
     eng.start(eps=30, inject_prob=0.4, warmup_users=12, warmup_days=10)
     time.sleep(2.5)
     st = eng.stop()

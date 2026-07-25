@@ -1,0 +1,13 @@
+.venv/
+.git/
+.github/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+release/
+*.sqlite3
+*.joblib
+.claude/

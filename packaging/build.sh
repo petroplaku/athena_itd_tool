@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Build a standalone Aegis UBA binary for Linux or macOS.
+# Build a standalone ATHENA ITD binary for Linux or macOS.
 # Usage:  ./packaging/build.sh
-# Output: dist/aegis   (plus a dist/aegis-<os>-<arch>.tar.gz archive)
+# Output: dist/athena   (plus a dist/athena-<os>-<arch>.tar.gz archive)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -20,10 +20,10 @@ pip install --upgrade pip >/dev/null
 pip install . pyinstaller >/dev/null
 
 echo "==> Running PyInstaller"
-pyinstaller packaging/aegis.spec --noconfirm --distpath dist --workpath build/pyi
+pyinstaller packaging/athena.spec --noconfirm --distpath dist --workpath build/pyi
 
 echo "==> Packaging archive"
 mkdir -p release
-tar -czf "release/aegis-${OS}-${ARCH}.tar.gz" -C dist aegis
-echo "==> Done: dist/aegis  and  release/aegis-${OS}-${ARCH}.tar.gz"
+tar -czf "release/athena-${OS}-${ARCH}.tar.gz" -C dist athena
+echo "==> Done: dist/athena  and  release/athena-${OS}-${ARCH}.tar.gz"
 deactivate

@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATHENA ITD — {{ organization }} Command Console</title>
+<link rel="icon" type="image/jpeg" href="/static/athena.jpeg">
+<script src="/static/chart.umd.min.js"></script>
+<style>
+/* ════════════════════════════════════════════════════════════════
+   ATHENA ITD — Insider Threat Detection
+   Theme: midnight bronze — deep navy, burnished gold, steel circuit
+   ════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#04060c; --bg2:#080c16; --panel:linear-gradient(165deg,rgba(24,34,56,.42),rgba(10,16,30,.55));
+  --panel-solid:#0a1020; --border:rgba(160,178,208,.12); --border-gold:rgba(212,175,95,.3);
+  --text:#e7e5dd; --muted:#98a4ba; --dim:#5f6f8a;
+  --gold:#d4af5f; --gold-hi:#e8c87a; --gold-dim:#9a7b3f;
+  --steel:#4f7fc2; --ice:#8fb8e8;
+  --crit:#ff4d6a; --high:#ff9840; --med:#e8c153; --low:#3ddc97; --good:#3ddc97;
+  --font:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono','Cascadia Code',ui-monospace,'SF Mono',Menlo,monospace;
+  --r:12px; --shadow:0 14px 40px rgba(0,0,0,.5);
+  --sbw:272px; --pad:15px; --gap:14px; --kpi:26px;
+}
+body.compact{--pad:10px;--gap:10px;--kpi:22px}
+body.rail{--sbw:68px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font);color:var(--text);font-size:14px;overflow:hidden;
+  background:
+    radial-gradient(1100px 520px at 82% -12%, rgba(212,175,95,.075), transparent 60%),
+    radial-gradient(900px 460px at -8% 112%, rgba(79,127,194,.085), transparent 55%),
+    radial-gradient(700px 500px at 50% 120%, rgba(212,175,95,.04), transparent 60%),
+    var(--bg);
+}
+/* circuit-trace overlay, echoing the logo's board etchings */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='190' height='190'><g fill='none' stroke='%23d4af5f' stroke-opacity='.05'><path d='M22 0v42h52v32'/><path d='M190 62h-44v52'/><path d='M0 148h64v42'/><circle cx='74' cy='74' r='2.6'/><circle cx='146' cy='114' r='2.6'/><circle cx='64' cy='148' r='2.6'/></g><g fill='none' stroke='%234f7fc2' stroke-opacity='.045'><path d='M126 190v-32h44'/><path d='M104 0v27h-32'/><circle cx='170' cy='158' r='2.6'/><circle cx='72' cy='27' r='2.6'/></g></svg>");}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(760px 300px at 50% -40px, rgba(212,175,95,.06), transparent 70%);
+  animation:breathe 10s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.35}}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#2c3a56;border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:#41567e}
+::-webkit-scrollbar-track{background:transparent}
+::selection{background:rgba(212,175,95,.3)}
+
+/* ═════ layout ═════ */
+.shell{display:grid;grid-template-columns:var(--sbw) 1fr;height:100vh;position:relative;z-index:1;
+  transition:grid-template-columns .18s ease}
+.side{background:linear-gradient(180deg,#090e1b 0%,#060a13 100%);
+  border-right:1px solid rgba(212,175,95,.14);display:flex;flex-direction:column;overflow-y:auto;position:relative}
+.side::before{content:"";position:absolute;top:0;right:-1px;width:1px;height:100%;
+  background:linear-gradient(180deg,rgba(212,175,95,.5),rgba(212,175,95,.05) 30%,rgba(79,127,194,.2) 70%,transparent)}
+.main{display:flex;flex-direction:column;min-width:0}
+.content{flex:1;min-height:0;overflow-y:auto;padding:16px 20px 20px}
+
+/* ═════ sidebar / brand ═════ */
+.brand{display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:12px 12px 11px;position:relative;flex:none}
+.brand::after{content:"";position:absolute;left:14px;right:14px;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,175,95,.45),transparent)}
+/* full, uncropped logo — the artwork carries the wordmark itself */
+.brand .logowrap{width:132px;max-width:100%;padding:4px;border-radius:12px;position:relative;
+  background:radial-gradient(circle at 50% 42%,rgba(212,175,95,.11),transparent 68%);
+  animation:logoglow 5s ease-in-out infinite}
+.brand img.logo{display:block;width:100%;height:auto;object-fit:contain;
+  filter:drop-shadow(0 0 14px rgba(212,175,95,.3))}
+@keyframes logoglow{50%{background:radial-gradient(circle at 50% 42%,rgba(212,175,95,.2),transparent 72%)}}
+.brand .t2{font-size:8px;color:var(--gold-dim);letter-spacing:2.6px;
+  text-transform:uppercase;text-align:center;white-space:nowrap}
+
+/* collapsed rail mode */
+body.rail .brand .logowrap{width:42px;padding:0}
+body.rail .brand .t2,body.rail .navsec .lbl,body.rail .nav a .tx,
+body.rail .side .foot .ft,body.rail .nav a .cnt{display:none}
+body.rail .nav a{justify-content:center;padding:9px 0;border-radius:9px;margin:0 8px}
+body.rail .nav a .ic{width:auto;font-size:15px}
+body.rail .navsec{padding:8px 0 2px}
+body.rail .navsec .lbl{padding:0}
+body.rail .side .foot{text-align:center;padding:12px 4px}
+.navsec{padding:13px 12px 2px}
+.navsec .lbl{display:flex;align-items:center;gap:9px;font-size:9.5px;letter-spacing:2.4px;
+  color:var(--gold-dim);text-transform:uppercase;padding:6px 10px;font-weight:700}
+.navsec .lbl::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(212,175,95,.22),transparent)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:11px;padding:8px 12px;border-radius:0 9px 9px 0;
+  color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;
+  border-left:2px solid transparent;transition:.16s}
+.nav a:hover{color:var(--text);background:rgba(160,178,208,.06);border-left-color:rgba(212,175,95,.35)}
+.nav a.on{color:var(--gold-hi);border-left-color:var(--gold);
+  background:linear-gradient(90deg,rgba(212,175,95,.13),rgba(212,175,95,.02) 70%,transparent);
+  text-shadow:0 0 14px rgba(212,175,95,.35)}
+.nav a .ic{width:17px;text-align:center;font-size:13.5px;opacity:.85}
+.nav a .cnt{margin-left:auto;font-size:10.5px;font-family:var(--mono);color:var(--gold);
+  background:rgba(212,175,95,.1);border:1px solid rgba(212,175,95,.2);border-radius:8px;padding:1px 7px}
+.side .foot{margin-top:auto;padding:15px 18px;font-size:10.5px;color:var(--dim);font-family:var(--mono);
+  border-top:1px solid rgba(160,178,208,.07)}
+.side .foot b{color:var(--gold-dim);font-weight:600}
+
+/* ═════ topbar ═════ */
+.top{display:flex;align-items:center;gap:13px;padding:9px 20px;position:relative;z-index:5;flex:none;
+  background:rgba(8,12,22,.74);backdrop-filter:blur(12px)}
+/* icon buttons in the topbar */
+.iconbtn{width:30px;height:30px;padding:0;display:grid;place-items:center;font-size:14px;
+  border-radius:8px;color:var(--muted);flex:none}
+.iconbtn:hover{color:var(--gold-hi);border-color:rgba(212,175,95,.4)}
+.iconbtn.act{color:var(--gold-hi);border-color:rgba(212,175,95,.45);background:rgba(212,175,95,.1)}
+.searchbtn{display:flex;align-items:center;gap:8px;padding:6px 11px;border-radius:8px;
+  font-size:12px;color:var(--dim);min-width:190px;background:rgba(4,7,13,.6)}
+.searchbtn:hover{color:var(--text);border-color:rgba(212,175,95,.35)}
+.searchbtn kbd{margin-left:auto;font-family:var(--mono);font-size:9.5px;padding:1px 5px;
+  border:1px solid rgba(160,178,208,.22);border-radius:4px;color:var(--dim)}
+
+/* ═════ command palette ═════ */
+.pal{position:fixed;inset:0;z-index:80;display:none;justify-content:center;align-items:flex-start;
+  padding-top:12vh;background:rgba(3,5,10,.7);backdrop-filter:blur(5px)}
+.pal.on{display:flex}
+.palbox{width:min(620px,94vw);background:linear-gradient(180deg,#0c1322,#070c15);
+  border:1px solid rgba(212,175,95,.3);border-radius:14px;overflow:hidden;
+  box-shadow:var(--shadow),0 0 60px rgba(212,175,95,.08)}
+.palbox input{width:100%;border:0;border-radius:0;background:transparent;padding:14px 16px;font-size:15px}
+.palbox input:focus{box-shadow:none}
+.palsep{height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,95,.4),transparent)}
+.palres{max-height:52vh;overflow-y:auto;padding:6px}
+.palit{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+.palit .ic{width:20px;text-align:center;opacity:.85}
+.palit .sub{margin-left:auto;font-size:10.5px;color:var(--dim);font-family:var(--mono)}
+.palit.sel{background:linear-gradient(90deg,rgba(212,175,95,.18),rgba(212,175,95,.03));
+  color:var(--gold-hi);box-shadow:inset 2px 0 0 var(--gold)}
+.palhint{display:flex;gap:14px;padding:8px 14px;border-top:1px solid rgba(160,178,208,.08);
+  font-size:10.5px;color:var(--dim);font-family:var(--mono)}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(90deg,rgba(212,175,95,.5),rgba(160,178,208,.12) 35%,rgba(79,127,194,.3) 75%,transparent)}
+.top h1{font-size:15px;font-weight:800;letter-spacing:2.6px;text-transform:uppercase;
+  background:linear-gradient(90deg,#efe0b4,#d4af5f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.top .org{color:var(--dim);font-size:11.5px;letter-spacing:.6px;margin-top:1px}
+.top .sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:2px;
+  font-size:10.5px;font-weight:700;letter-spacing:1.4px;border:1px solid var(--border);font-family:var(--mono);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+.pill .dot{width:8px;height:8px;border-radius:50%}
+.pill.threat-CRITICAL{color:var(--crit);border-color:rgba(255,77,106,.45);background:rgba(255,77,106,.09)}
+.pill.threat-HIGH{color:var(--high);border-color:rgba(255,152,64,.4);background:rgba(255,152,64,.08)}
+.pill.threat-MEDIUM{color:var(--med);border-color:rgba(232,193,83,.4);background:rgba(232,193,83,.07)}
+.pill.threat-LOW,.pill.threat-NONE{color:var(--low);border-color:rgba(61,220,151,.35);background:rgba(61,220,151,.06)}
+.pill .dot.live{background:var(--good);box-shadow:0 0 9px var(--good);animation:pulse 1.4s infinite}
+.pill .dot.idle{background:var(--dim)}
+@keyframes pulse{50%{opacity:.35}}
+.clock{font-family:var(--mono);font-size:12px;color:var(--gold);text-shadow:0 0 12px rgba(212,175,95,.3)}
+.userchip{display:inline-flex;align-items:center;gap:8px;padding:3px 4px 3px 11px;
+  border:1px solid rgba(212,175,95,.28);border-radius:999px;background:rgba(212,175,95,.06)}
+.userchip .uname{font-size:12px;font-weight:600;color:var(--gold-hi)}
+.userchip .urole{font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);
+  color:var(--dim);border:1px solid rgba(160,178,208,.2);border-radius:5px;padding:1px 5px}
+.userchip .iconbtn{width:26px;height:26px;font-size:13px}
+
+/* ═════ primitives ═════ */
+.grid{display:grid;gap:var(--gap)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:var(--pad);backdrop-filter:blur(6px);position:relative;transition:border-color .2s,box-shadow .2s}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;border-radius:var(--r) var(--r) 0 0;
+  background:linear-gradient(90deg,rgba(212,175,95,.4),rgba(212,175,95,.05) 45%,transparent);pointer-events:none}
+.card::after{content:"";position:absolute;top:6px;right:6px;width:13px;height:13px;pointer-events:none;
+  border-top:2px solid rgba(212,175,95,.35);border-right:2px solid rgba(212,175,95,.35);transition:.2s}
+.card:hover{border-color:rgba(212,175,95,.28);box-shadow:0 0 26px rgba(212,175,95,.06)}
+.card:hover::after{border-color:rgba(212,175,95,.7);width:17px;height:17px}
+.card h3{font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--gold-dim);
+  font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex:none}
+
+/* ═════ viewport-filling views ═════ */
+/* charts get an explicit flex box so Chart.js can never balloon the page */
+.chartbox{position:relative;flex:1 1 auto;min-height:0;width:100%}
+.chartbox canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
+.card.flexcard{display:flex;flex-direction:column;min-height:0}
+.card.flexcard .scroll{flex:1 1 auto;min-height:0;overflow-y:auto;margin-right:-6px;padding-right:6px}
+/* Overview fills exactly one screen: KPI strip + two equal chart rows */
+#view-overview.on{display:flex;flex-direction:column;gap:var(--gap);height:100%;min-height:0}
+#view-overview .kpis{flex:none}
+#view-overview .ovrow{display:grid;gap:var(--gap);grid-template-columns:1.85fr 1fr;
+  flex:1 1 0;min-height:190px}
+/* NB: always put a space between a brace and a following hash in this file —
+   that two-character sequence opens a Jinja comment and breaks the template. */
+@media(max-width:1180px){ #view-overview .ovrow{grid-template-columns:1fr}
+  #view-overview.on{height:auto} }
+@media(max-height:720px){ #view-overview.on{height:auto} }
+.card h3::before{content:"▮";font-size:9px;color:var(--gold);opacity:.8}
+.card h3 .rt{margin-left:auto;letter-spacing:0;text-transform:none;font-weight:500;color:var(--muted)}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(148px,1fr))}
+.kpi{overflow:hidden;padding:11px 14px}
+.kpi .v{font-size:var(--kpi);font-weight:800;font-family:var(--mono);letter-spacing:-.5px;
+  color:var(--gold-hi);text-shadow:0 0 20px rgba(212,175,95,.35);line-height:1.15}
+.kpi .l{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:1.2px;text-transform:uppercase}
+.kpi.clickable{cursor:pointer}
+.kpi.clickable:hover .v{color:#fff}
+.kpi .glow{position:absolute;right:-22px;top:-22px;width:92px;height:92px;border-radius:50%;
+  background:radial-gradient(circle,var(--gc,rgba(212,175,95,.15)),transparent 70%)}
+button,.btn{font-family:var(--font);font-size:12.5px;font-weight:600;color:var(--text);
+  background:rgba(160,178,208,.07);border:1px solid rgba(160,178,208,.18);border-radius:8px;
+  padding:7px 14px;cursor:pointer;transition:.15s}
+button:hover,.btn:hover{background:rgba(160,178,208,.14);border-color:rgba(160,178,208,.34)}
+button.pri{background:linear-gradient(135deg,rgba(212,175,95,.2),rgba(79,127,194,.14));
+  border-color:rgba(212,175,95,.5);color:#eed9a2}
+button.pri:hover{background:linear-gradient(135deg,rgba(212,175,95,.32),rgba(79,127,194,.22));
+  box-shadow:0 0 16px rgba(212,175,95,.22)}
+button.warn{border-color:rgba(255,77,106,.4);color:#ffb1bd;background:rgba(255,77,106,.08)}
+button.warn:hover{background:rgba(255,77,106,.16)}
+button.sm{padding:4px 10px;font-size:11.5px;border-radius:7px}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font-family:var(--font);font-size:13px;color:var(--text);
+  background:rgba(4,7,13,.72);border:1px solid rgba(160,178,208,.16);border-radius:8px;padding:7px 11px;outline:0;
+  transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:rgba(212,175,95,.55);box-shadow:0 0 10px rgba(212,175,95,.12)}
+input[type=range]{padding:0;accent-color:var(--gold)}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--gold-dim);
+  text-align:left;padding:8px 10px;border-bottom:1px solid rgba(212,175,95,.18);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid rgba(160,178,208,.06);vertical-align:middle}
+tr:hover td{background:rgba(212,175,95,.035)}
+.mono{font-family:var(--mono);font-size:11.5px}
+.muted{color:var(--muted)} .dim{color:var(--dim)}
+.badge{display:inline-block;padding:2px 9px;border-radius:2px;font-size:10px;
+  font-weight:800;letter-spacing:1px;font-family:var(--mono);
+  clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px)}
+.b-CRITICAL{color:#ffd2da;background:rgba(255,77,106,.17);border:1px solid rgba(255,77,106,.5)}
+.b-HIGH{color:#ffdcb6;background:rgba(255,152,64,.15);border:1px solid rgba(255,152,64,.45)}
+.b-MEDIUM{color:#f5e5b0;background:rgba(232,193,83,.13);border:1px solid rgba(232,193,83,.42)}
+.b-LOW{color:#b9f3d8;background:rgba(61,220,151,.11);border:1px solid rgba(61,220,151,.38)}
+.chip{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-family:var(--mono);
+  background:rgba(212,175,95,.09);border:1px solid rgba(212,175,95,.3);color:#e5cf96;
+  margin:2px 3px 2px 0;text-decoration:none}
+.chip:hover{background:rgba(212,175,95,.2)}
+.chip.det{background:rgba(79,127,194,.11);border-color:rgba(79,127,194,.34);color:#b7d3f5}
+.riskbar{height:5px;border-radius:4px;background:rgba(160,178,208,.11);overflow:hidden;min-width:70px}
+.riskbar i{display:block;height:100%;border-radius:4px}
+.view{display:none;animation:fadein .24s ease}
+.view.on{display:block}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.vhead{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.vhead h2{font-size:16px;font-weight:800;letter-spacing:3px;text-transform:uppercase;
+  background:linear-gradient(90deg,#f0e0b0,#d4af5f 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.vhead .sub{color:var(--muted);font-size:12.5px}
+.vhead .sp{flex:1}
+.empty{padding:40px;text-align:center;color:var(--dim)}
+.empty .big{font-size:34px;margin-bottom:10px;filter:grayscale(.2)}
+
+/* score ring */
+.ring{--p:0;--c:var(--low);width:64px;height:64px;border-radius:50%;flex:none;
+  background:conic-gradient(var(--c) calc(var(--p)*1%),rgba(160,178,208,.12) 0);
+  display:grid;place-items:center;position:relative;
+  box-shadow:0 0 14px color-mix(in srgb,var(--c) 30%,transparent)}
+.ring::before{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--panel-solid)}
+.ring b{position:relative;font-family:var(--mono);font-size:16px}
+.ring.big{width:120px;height:120px}
+.ring.big::before{inset:10px}
+.ring.big b{font-size:28px}
+
+/* alert cards */
+.acard{border-left:3px solid var(--border);margin-bottom:14px}
+.acard.CRITICAL{border-left-color:var(--crit)}
+.acard.HIGH{border-left-color:var(--high)}
+.acard.MEDIUM{border-left-color:var(--med)}
+.acard.LOW{border-left-color:var(--low)}
+.acard .head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.acard .who{font-size:16px;font-weight:800;letter-spacing:.3px}
+.acard .meta{font-size:11.5px;color:var(--muted)}
+.factors{margin:12px 0 4px;display:flex;flex-direction:column;gap:7px}
+.factor{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;
+  padding:8px 11px;border-radius:8px;background:rgba(4,7,13,.5);border:1px solid rgba(160,178,208,.08);
+  border-left:2px solid rgba(212,175,95,.35)}
+.factor .w{font-family:var(--mono);font-size:11px;color:var(--gold-hi);flex:none;min-width:42px;text-align:right}
+.factor .fn{font-weight:700}
+.factor .fd{color:var(--muted);margin-top:2px;font-size:12px}
+.sigrow{display:flex;gap:14px;margin:10px 0;flex-wrap:wrap}
+.sig{font-size:10.5px;color:var(--dim);min-width:100px;flex:1}
+.sig .riskbar{margin-top:4px}
+.acard .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.recs{margin-top:10px;font-size:12px;color:var(--muted)}
+.recs li{margin-left:18px;padding:1.5px 0}
+
+/* live monitor */
+.feed{height:430px;overflow-y:auto;font-family:var(--mono);font-size:11.4px;position:relative;
+  background:rgba(3,5,10,.7);border:1px solid rgba(212,175,95,.14);border-radius:10px;padding:10px;
+  background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(160,178,208,.012) 2px 4px)}
+.feed .row{padding:2.5px 6px;border-radius:5px;display:flex;gap:9px;white-space:nowrap}
+.feed .row:hover{background:rgba(212,175,95,.05)}
+.feed .t{color:var(--dim)} .feed .u{color:var(--ice);min-width:120px} .feed .a{color:#d9c58a;min-width:130px}
+.feed .row.inject{background:rgba(232,193,83,.07);color:var(--med)}
+.feed .row.threat{background:rgba(255,77,106,.1)}
+.notifs{display:flex;flex-direction:column;gap:9px;max-height:430px;overflow-y:auto}
+.notif{padding:11px 13px;border-radius:10px;border:1px solid rgba(255,77,106,.32);
+  background:rgba(255,77,106,.07);animation:fadein .3s}
+.notif.HIGH{border-color:rgba(255,152,64,.35);background:rgba(255,152,64,.07)}
+.notif b{font-size:13.5px}
+.notif .d{font-size:11.5px;color:var(--muted);margin-top:3px}
+
+/* mitre matrix */
+.matrix{display:flex;gap:9px;overflow-x:auto;padding-bottom:14px;align-items:flex-start}
+.tcol{min-width:158px;flex:none}
+.tcol .th{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#d9c58a;
+  padding:7px 9px;background:rgba(212,175,95,.09);border:1px solid rgba(212,175,95,.26);
+  border-radius:8px;text-align:center;margin-bottom:7px}
+.tcol .th .cov{display:block;font-family:var(--mono);color:var(--dim);font-weight:500;margin-top:2px}
+.tcell{display:block;padding:7px 9px;margin-bottom:6px;border-radius:8px;font-size:11px;
+  border:1px solid rgba(160,178,208,.1);background:rgba(160,178,208,.035);color:var(--dim);
+  text-decoration:none;transition:.15s;cursor:pointer}
+.tcell:hover{transform:translateY(-1px);border-color:rgba(212,175,95,.5)}
+.tcell.cov{background:rgba(79,127,194,.1);border-color:rgba(79,127,194,.36);color:#c3d9f6}
+.tcell.hit{background:rgba(255,77,106,.12);border-color:rgba(255,77,106,.45);color:#ffd2da}
+.tcell .tid{font-family:var(--mono);font-size:9.5px;opacity:.75}
+.tcell .hits{float:right;font-family:var(--mono);font-size:10px}
+
+/* compliance */
+.fwgrid{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.covbar{height:7px;border-radius:5px;background:rgba(160,178,208,.11);overflow:hidden;margin:9px 0}
+.covbar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--steel))}
+.ctl{display:flex;gap:9px;align-items:center;font-size:12px;padding:6px 4px;
+  border-bottom:1px solid rgba(160,178,208,.06)}
+.st{font-size:9.5px;font-weight:800;font-family:var(--mono);border-radius:5px;padding:1.5px 7px;flex:none}
+.st.covered{color:#b9f3d8;background:rgba(61,220,151,.12)}
+.st.monitored{color:#c3d9f6;background:rgba(79,127,194,.14)}
+.st.gap{color:#ffb1bd;background:rgba(255,77,106,.12)}
+
+/* detectors */
+.detgrid{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.det .dh{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.det .dh b{font-size:13.5px}
+.det .kind{font-size:9.5px;font-family:var(--mono);color:var(--gold-dim);
+  border:1px solid rgba(212,175,95,.25);padding:1px 7px;border-radius:5px}
+.det p{font-size:12px;color:var(--muted);margin-bottom:9px;min-height:34px}
+.switch{position:relative;width:38px;height:21px;flex:none;margin-left:auto;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.switch i{position:absolute;inset:0;border-radius:999px;background:rgba(160,178,208,.18);transition:.18s}
+.switch i::before{content:"";position:absolute;width:15px;height:15px;border-radius:50%;
+  background:#8a97ad;top:3px;left:3px;transition:.18s}
+.switch input:checked+i{background:rgba(212,175,95,.45)}
+.switch input:checked+i::before{background:var(--gold-hi);transform:translateX(17px);
+  box-shadow:0 0 8px rgba(212,175,95,.6)}
+
+/* modal & toasts */
+.overlay{position:fixed;inset:0;background:rgba(3,5,10,.76);backdrop-filter:blur(5px);
+  display:none;z-index:60;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 20px}
+.overlay.on{display:flex}
+.modal{width:min(880px,96vw);background:linear-gradient(180deg,#0c1322,#070c15);
+  border:1px solid rgba(212,175,95,.28);border-radius:16px;padding:24px;box-shadow:var(--shadow),0 0 60px rgba(212,175,95,.07);
+  animation:fadein .2s;position:relative}
+.modal::before{content:"";position:absolute;top:0;left:16px;right:16px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,175,95,.6),transparent)}
+.modal .x{float:right;font-size:18px;background:none;border:none;color:var(--dim);padding:2px 8px}
+.modal .x:hover{color:var(--gold-hi)}
+.toasts{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:9px;z-index:99}
+.toast{padding:12px 16px;border-radius:10px;border:1px solid rgba(160,178,208,.18);min-width:270px;
+  background:rgba(10,16,30,.97);box-shadow:var(--shadow);font-size:12.5px;animation:slidein .25s;
+  border-left:3px solid var(--gold)}
+.toast b{display:block;margin-bottom:2px}
+.toast.CRITICAL{border-left-color:var(--crit);border-color:rgba(255,77,106,.5)}
+.toast.HIGH{border-left-color:var(--high);border-color:rgba(255,152,64,.45)}
+.toast.ok{border-left-color:var(--low);border-color:rgba(61,220,151,.4)}
+.toast.err{border-left-color:var(--crit);border-color:rgba(255,77,106,.5)}
+@keyframes slidein{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+.two{grid-template-columns:1fr 1fr} .three{grid-template-columns:2fr 1fr}
+@media(max-width:1100px){.two,.three{grid-template-columns:1fr}}
+.formrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.hr{border:none;border-top:1px solid rgba(212,175,95,.14);margin:15px 0}
+.watchstar{cursor:pointer;font-size:15px;color:var(--dim);transition:.15s}
+.watchstar.on{color:var(--med);text-shadow:0 0 10px rgba(232,193,83,.6)}
+.contrib{display:flex;align-items:center;gap:9px;font-size:11.5px;padding:3px 0}
+.contrib .cn{min-width:170px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.contrib .cb{flex:1;height:6px;border-radius:4px;background:rgba(160,178,208,.1);overflow:hidden}
+.contrib .cb i{display:block;height:100%}
+.contrib .cv{font-family:var(--mono);font-size:10.5px;min-width:52px;text-align:right}
+</style>
+</head>
+<body data-org="{{ organization }}" data-version="{{ version }}">
+<div class="shell">
+  <aside class="side">
+    <div class="brand">
+      <div class="logowrap"><img src="/static/athena.jpeg" alt="ATHENA ITD" class="logo"></div>
+      <div class="t2">Insider Threat Detection</div>
+    </div>
+    <div class="navsec"><div class="lbl">Operations</div><nav class="nav">
+      <a href="#overview" data-v="overview"><span class="ic">◈</span><span class="tx"> Overview</span></a>
+      <a href="#live" data-v="live"><span class="ic">⚡</span><span class="tx"> Live Monitor</span><span class="cnt" id="nav-live-dot"></span></a>
+      <a href="#alerts" data-v="alerts"><span class="ic">⚠</span><span class="tx"> Alerts</span><span class="cnt" id="nav-alerts"></span></a>
+      <a href="#responses" data-v="responses"><span class="ic">⛨</span><span class="tx"> Response Log</span></a>
+    </nav></div>
+    <div class="navsec"><div class="lbl">Investigation</div><nav class="nav">
+      <a href="#users" data-v="users"><span class="ic">◉</span><span class="tx"> Users</span></a>
+      <a href="#cases" data-v="cases"><span class="ic">▤</span><span class="tx"> Cases</span><span class="cnt" id="nav-cases"></span></a>
+      <a href="#intel" data-v="intel"><span class="ic">⬡</span><span class="tx"> Network Intel</span></a>
+    </nav></div>
+    <div class="navsec"><div class="lbl">Governance</div><nav class="nav">
+      <a href="#mitre" data-v="mitre"><span class="ic">▦</span><span class="tx"> MITRE ATT&amp;CK</span></a>
+      <a href="#compliance" data-v="compliance"><span class="ic">§</span><span class="tx"> Compliance</span></a>
+      <a href="#audit" data-v="audit"><span class="ic">≡</span><span class="tx"> Audit Trail</span></a>
+    </nav></div>
+    <div class="navsec"><div class="lbl">Platform</div><nav class="nav">
+      <a href="#data" data-v="data"><span class="ic">⛁</span><span class="tx"> Data &amp; Model</span></a>
+      <a href="#detect" data-v="detect"><span class="ic">☲</span><span class="tx"> Detection Config</span></a>
+      <a href="#settings" data-v="settings"><span class="ic">⚙</span><span class="tx"> Settings</span></a>
+    </nav></div>
+    <div class="foot"><b>ATHENA</b><span class="ft"> ITD</span> <span class="ft">v<span id="f-ver"></span> · command console</span></div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <button class="iconbtn" id="tb-rail" title="Collapse sidebar (Ctrl+B)">☰</button>
+      <div><h1 id="t-title">Overview</h1><div class="org" id="t-org"></div></div>
+      <button class="searchbtn" id="tb-search">🔍 Search or jump to… <kbd>Ctrl K</kbd></button>
+      <div class="sp"></div>
+      <span class="pill" id="p-stream"><span class="dot idle"></span> STREAM IDLE</span>
+      <span class="pill threat-NONE" id="p-threat"><span class="dot"></span> THREAT —</span>
+      <span class="clock" id="clock"></span>
+      <button class="iconbtn" id="tb-refresh" title="Refresh now (R)">⟳</button>
+      <button class="iconbtn" id="tb-density" title="Toggle compact density">▤</button>
+      <button class="iconbtn" id="tb-help" title="Keyboard shortcuts (?)">?</button>
+      <span class="userchip" id="tb-user" style="display:none">
+        <span class="uname" id="tb-uname"></span>
+        <span class="urole" id="tb-urole"></span>
+        <button class="iconbtn" id="tb-logout" title="Sign out">⏻</button>
+      </span>
+    </header>
+    <main class="content">
+
+      <!-- ============ OVERVIEW ============ -->
+      <section class="view" id="view-overview">
+        <div class="grid kpis" id="ov-kpis"></div>
+        <div class="ovrow">
+          <div class="card flexcard"><h3>Activity Trend
+            <span class="rt"><select id="ov-range" style="padding:2px 7px;font-size:11px">
+              <option value="7">7 days</option><option value="14">14 days</option>
+              <option value="30" selected>30 days</option><option value="0">All</option>
+            </select></span></h3>
+            <div class="chartbox"><canvas id="ch-trend"></canvas></div></div>
+          <div class="card flexcard"><h3>Risk Distribution</h3>
+            <div class="chartbox"><canvas id="ch-risk"></canvas></div></div>
+        </div>
+        <div class="ovrow">
+          <div class="card flexcard"><h3>Highest-Risk Users
+            <span class="rt"><a href="#alerts" style="color:var(--gold-dim);text-decoration:none">view all →</a></span></h3>
+            <div class="scroll" id="ov-top"></div></div>
+          <div class="card flexcard"><h3>Platform Status</h3>
+            <div class="scroll" id="ov-status"></div></div>
+        </div>
+      </section>
+
+      <!-- ============ LIVE ============ -->
+      <section class="view" id="view-live">
+        <div class="vhead"><h2>⚡ Real-Time Monitor</h2>
+          <span class="sub">continuous scoring of live telemetry</span><span class="sp"></span>
+          <label class="f">events/sec <input id="lv-eps" type="number" value="6" min="1" max="60" style="width:78px"></label>
+          <label class="f">inject&nbsp;% <input id="lv-inject" type="number" value="6" min="0" max="50" style="width:78px"></label>
+          <button class="pri" id="lv-start">▶ Start</button>
+          <button id="lv-stop">■ Stop</button>
+        </div>
+        <div class="grid kpis" id="lv-stats" style="margin-bottom:16px"></div>
+        <div class="grid two">
+          <div class="card"><h3>Event Stream</h3><div class="feed" id="lv-feed"></div></div>
+          <div class="card"><h3>Threat Notifications</h3><div class="notifs" id="lv-notifs">
+            <div class="empty">No threats detected yet</div></div></div>
+        </div>
+      </section>
+
+      <!-- ============ ALERTS ============ -->
+      <section class="view" id="view-alerts">
+        <div class="vhead"><h2>⚠ Alert Queue</h2><span class="sp"></span>
+          <input id="al-q" placeholder="filter user…" style="width:170px">
+          <select id="al-level"><option value="LOW">All levels</option><option value="MEDIUM">MEDIUM+</option>
+            <option value="HIGH" selected>HIGH+</option><option value="CRITICAL">CRITICAL</option></select>
+          <select id="al-status"><option value="">Any status</option><option value="open">Open</option>
+            <option value="new">New</option><option value="investigating">Investigating</option>
+            <option value="escalated">Escalated</option><option value="resolved">Resolved</option>
+            <option value="false_positive">False positive</option></select>
+          <button class="btn" onclick="window.open('/api/export.csv')">⇩ CSV</button>
+          <button class="pri" id="al-analyze">↻ Re-analyze</button>
+        </div>
+        <div id="al-list"></div>
+      </section>
+
+      <!-- ============ USERS ============ -->
+      <section class="view" id="view-users">
+        <div class="vhead"><h2>◉ Monitored Users</h2><span class="sp"></span>
+          <input id="us-q" placeholder="search…" style="width:180px">
+          <select id="us-dept"><option value="">All departments</option></select>
+          <select id="us-level"><option value="LOW">All levels</option><option value="MEDIUM">MEDIUM+</option>
+            <option value="HIGH">HIGH+</option></select></div>
+        <div class="card" style="padding:6px 10px"><table>
+          <thead><tr><th></th><th>User</th><th>Department</th><th>Role</th><th>Risk</th><th>Level</th>
+            <th>Status</th><th>Top factor</th><th>Events</th><th>Last seen</th></tr></thead>
+          <tbody id="us-body"></tbody></table></div>
+      </section>
+
+      <!-- ============ CASES ============ -->
+      <section class="view" id="view-cases">
+        <div class="vhead"><h2>▤ Investigation Cases</h2><span class="sp"></span>
+          <label class="f" style="flex-direction:row;align-items:center;gap:7px">
+            <input type="checkbox" id="cs-open"> open only</label>
+          <button class="pri" id="cs-new">+ New Case</button></div>
+        <div id="cs-list"></div>
+      </section>
+
+      <!-- ============ INTEL ============ -->
+      <section class="view" id="view-intel">
+        <div class="vhead"><h2>⬡ Network &amp; Geo Intelligence</h2><span class="sp"></span>
+          <input id="ip-q" placeholder="lookup IP…" style="width:170px" class="mono">
+          <button id="ip-go">Classify</button></div>
+        <div id="ip-result" style="margin-bottom:14px"></div>
+        <div class="grid two" style="margin-bottom:16px">
+          <div class="card"><h3>Activity by Country</h3><div id="in-countries"></div></div>
+          <div class="card"><h3>Source-IP Reputation</h3><div id="in-cats" style="margin-bottom:12px"></div>
+            <div id="in-flagged"></div></div>
+        </div>
+      </section>
+
+      <!-- ============ MITRE ============ -->
+      <section class="view" id="view-mitre">
+        <div class="vhead"><h2>▦ MITRE ATT&amp;CK Coverage</h2>
+          <span class="sub" id="mt-sub"></span></div>
+        <div class="matrix" id="mt-matrix"></div>
+      </section>
+
+      <!-- ============ COMPLIANCE ============ -->
+      <section class="view" id="view-compliance">
+        <div class="vhead"><h2>§ Compliance Coverage</h2><span class="sub" id="cp-sub"></span></div>
+        <div class="grid fwgrid" id="cp-list"></div>
+      </section>
+
+      <!-- ============ RESPONSES ============ -->
+      <section class="view" id="view-responses">
+        <div class="vhead"><h2>⛨ Response Audit Trail</h2>
+          <span class="sub">every dispatched action, simulated or enforced</span></div>
+        <div class="card" style="padding:6px 10px"><table>
+          <thead><tr><th>When</th><th>User</th><th>Action</th><th>Mode</th><th>Detail</th></tr></thead>
+          <tbody id="rs-body"></tbody></table></div>
+      </section>
+
+      <!-- ============ AUDIT ============ -->
+      <section class="view" id="view-audit">
+        <div class="vhead"><h2>≡ Operator Audit Log</h2>
+          <span class="sub">who did what to the platform</span></div>
+        <div class="card" style="padding:6px 10px"><table>
+          <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Detail</th><th>From</th></tr></thead>
+          <tbody id="au-body"></tbody></table></div>
+      </section>
+
+      <!-- ============ DATA & MODEL ============ -->
+      <section class="view" id="view-data">
+        <div class="vhead"><h2>⛁ Data &amp; Model</h2><span class="sp"></span>
+          <button class="pri" id="dm-analyze">◈ Run Analysis</button></div>
+        <div class="grid two" style="margin-bottom:16px">
+          <div class="card"><h3>Synthetic Enterprise Generator</h3>
+            <div class="formrow">
+              <label class="f">users <input id="g-users" type="number" value="30" style="width:80px"></label>
+              <label class="f">days <input id="g-days" type="number" value="30" style="width:80px"></label>
+              <label class="f">seed <input id="g-seed" type="number" value="1337" style="width:90px"></label>
+              <button class="pri" id="g-go">Generate</button></div>
+            <p class="muted" style="font-size:12px">Creates a realistic workforce with planted insider-threat
+              scenarios (exfiltration, off-hours, brute force, privilege abuse, impossible travel) as ground truth.</p>
+            <div id="g-out" class="mono muted" style="margin-top:8px"></div></div>
+          <div class="card"><h3>Ingest Log File</h3>
+            <div class="formrow">
+              <input type="file" id="up-file" style="flex:1">
+              <label class="f" style="flex-direction:row;align-items:center;gap:6px">
+                <input type="checkbox" id="up-reset"> replace</label>
+              <button class="pri" id="up-go">Upload</button></div>
+            <p class="muted" style="font-size:12px">CSV / JSON / JSONL / Linux auth.log — columns are auto-mapped
+              onto the canonical event schema.</p>
+            <div id="up-out" class="mono muted" style="margin-top:8px"></div></div>
+        </div>
+        <div class="grid two">
+          <div class="card"><h3>Benchmark Datasets</h3><div id="ds-list"></div></div>
+          <div class="card"><h3>Model</h3><div id="dm-model"></div>
+            <div class="formrow" style="margin-top:12px">
+              <button class="pri" id="dm-train">✦ Train / Retrain</button></div></div>
+        </div>
+      </section>
+
+      <!-- ============ DETECTION CONFIG ============ -->
+      <section class="view" id="view-detect">
+        <div class="vhead"><h2>☲ Detection Engineering</h2>
+          <span class="sub">toggle detectors, tune weights and thresholds</span></div>
+        <div class="grid detgrid" id="dt-list" style="margin-bottom:18px"></div>
+        <div class="card"><h3>Thresholds &amp; Signal Fusion</h3>
+          <div class="formrow" id="dt-thform"></div>
+          <button class="pri" id="dt-save">Save thresholds</button></div>
+      </section>
+
+      <!-- ============ SETTINGS ============ -->
+      <section class="view" id="view-settings">
+        <div class="vhead"><h2>⚙ Settings</h2></div>
+        <div class="grid two">
+          <div class="card"><h3>Organization</h3>
+            <div class="formrow">
+              <label class="f">organization <input id="st-org" style="width:220px"></label>
+              <label class="f">timezone <input id="st-tz" style="width:130px"></label></div>
+            <h3 style="margin-top:16px">Console Security</h3>
+            <div class="formrow">
+              <label class="f" style="flex-direction:row;align-items:center;gap:8px">
+                <input type="checkbox" id="st-auth"> require sign-in (accounts &amp; RBAC)</label>
+              <label class="f" style="flex-direction:row;align-items:center;gap:8px">
+                <input type="checkbox" id="st-enforce"> allow enforced responses</label></div>
+            <div class="dim" style="font-size:11px;margin:-4px 0 6px">When enabled, users sign in with
+              accounts below; the API key becomes an automation-only service credential.</div>
+            <div id="st-key" class="mono muted" style="font-size:11px;word-break:break-all"></div>
+            <h3 style="margin-top:16px">Retention Policy</h3>
+            <div class="formrow">
+              <label class="f">events (days) <input id="st-rev" type="number" style="width:90px"></label>
+              <label class="f">alerts (days) <input id="st-ral" type="number" style="width:90px"></label>
+              <label class="f">audit (days) <input id="st-rau" type="number" style="width:90px"></label>
+              <button id="st-purge">Purge now</button></div>
+            <div class="hr"></div>
+            <button class="warn" id="st-reset">⚠ Reset all data</button></div>
+          <div class="card"><h3>SIEM / SOAR Integrations</h3>
+            <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px" id="st-integ"></div>
+            <div class="formrow" style="margin-top:12px">
+              <label class="f">forward at least
+                <select id="st-minfwd"><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></label>
+            </div></div>
+        </div>
+        <div class="card" id="st-users-card" style="margin-top:16px">
+          <h3>User Accounts &amp; Access <span class="rt dim">role-based access control</span></h3>
+          <div class="dim" style="font-size:12px;margin-bottom:10px">
+            <b style="color:var(--gold-hi)">viewer</b> — read-only &nbsp;·&nbsp;
+            <b style="color:var(--gold-hi)">analyst</b> — triage, cases, watchlist, respond (simulated) &nbsp;·&nbsp;
+            <b style="color:var(--gold-hi)">admin</b> — full control incl. config &amp; users</div>
+          <div style="overflow-x:auto"><table>
+            <thead><tr><th>Username</th><th>Role</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+            <tbody id="st-users-body"></tbody></table></div>
+          <div class="formrow" style="margin-top:12px">
+            <label class="f">username <input id="nu-name" style="width:150px"></label>
+            <label class="f">password <input id="nu-pass" type="password" style="width:160px"></label>
+            <label class="f">role <select id="nu-role"><option>viewer</option><option>analyst</option><option>admin</option></select></label>
+            <button class="pri" id="nu-add">+ Add user</button></div>
+        </div>
+        <div class="card" id="st-sessions-card" style="margin-top:16px">
+          <h3>Active Sessions <span class="rt dim">signed-in browsers &amp; automation</span></h3>
+          <div class="dim" style="font-size:12px;margin-bottom:10px">
+            Revoke a session to sign that browser out immediately.</div>
+          <div style="overflow-x:auto"><table>
+            <thead><tr><th>User</th><th>Role</th><th>Source IP</th><th>Signed in</th><th>Expires</th><th style="text-align:right">Action</th></tr></thead>
+            <tbody id="st-sessions-body"></tbody></table></div>
+        </div>
+        <div style="margin-top:16px"><button class="pri" id="st-save">Save settings</button></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div class="toasts" id="toasts"></div>
+
+<div class="pal" id="pal"><div class="palbox">
+  <input id="pal-q" placeholder="Jump to a view, search a user, or run an action…" autocomplete="off">
+  <div class="palsep"></div>
+  <div class="palres" id="pal-res"></div>
+  <div class="palhint"><span>↑↓ navigate</span><span>⏎ select</span><span>esc close</span></div>
+</div></div>
+
+{% raw %}
+<script>
+"use strict";
+/* ======================= core helpers ======================= */
+const ORG = document.body.dataset.org, VERSION = document.body.dataset.version;
+document.getElementById('f-ver').textContent = VERSION;
+document.getElementById('t-org').textContent = ORG;
+
+let API_KEY = localStorage.getItem('athena_api_key') ||
+              localStorage.getItem('aegis_api_key') || '';
+function getCookie(name) {
+  const m = document.cookie.match('(?:^|; )' + name + '=([^;]*)');
+  return m ? decodeURIComponent(m[1]) : '';
+}
+async function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers);
+  const mutating = opts.json !== undefined ||
+    (opts.method && !['GET', 'HEAD'].includes(opts.method.toUpperCase()));
+  if (opts.json !== undefined) {
+    opts.method = opts.method || 'POST';
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(opts.json);
+    delete opts.json;
+  }
+  if (API_KEY) opts.headers['X-API-Key'] = API_KEY;
+  // double-submit CSRF token for cookie-authenticated mutations
+  if (mutating) {
+    const csrf = getCookie('athena_csrf');
+    if (csrf) opts.headers['X-CSRF-Token'] = csrf;
+  }
+  const r = await fetch(path, opts);
+  if (r.status === 401) {
+    // session expired or not signed in → go to the login page
+    location.href = '/login';
+    throw new Error('authentication required');
+  }
+  if (r.status === 403) {
+    let msg = 'You do not have permission for this action.';
+    try { msg = (await r.json()).detail || msg; } catch (e) {}
+    throw new Error(msg);
+  }
+  if (!r.ok) {
+    let msg = r.status + '';
+    try { msg = (await r.json()).detail || msg; } catch (e) {}
+    throw new Error(msg);
+  }
+  const ct = r.headers.get('content-type') || '';
+  return ct.includes('json') ? r.json() : r.text();
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtBytes(n) {
+  n = +n || 0; const u = ['B','KB','MB','GB','TB']; let i = 0;
+  while (n >= 1024 && i < u.length-1) { n /= 1024; i++; }
+  return n.toFixed(n >= 100 || i === 0 ? 0 : 1) + ' ' + u[i];
+}
+function fmtNum(n) { return (+n || 0).toLocaleString('en-US'); }
+function ago(iso) {
+  if (!iso) return '—';
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return Math.floor(s) + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+function fmtTs(iso) { return iso ? iso.replace('T', ' ').slice(0, 19) : '—'; }
+const LVL_COLOR = {CRITICAL:'#ff4d6a', HIGH:'#ff9840', MEDIUM:'#e8c153', LOW:'#3ddc97'};
+function badge(lvl) { return '<span class="badge b-' + lvl + '">' + lvl + '</span>'; }
+function ringColor(score) {
+  return score >= 88 ? '#ff4d6a' : score >= 75 ? '#ff9840' : score >= 50 ? '#e8c153' : '#3ddc97';
+}
+function ring(score, big) {
+  const c = ringColor(score);
+  return '<div class="ring' + (big ? ' big' : '') + '" style="--p:' + Math.min(100, score) +
+         ';--c:' + c + '"><b>' + Math.round(score) + '</b></div>';
+}
+function toast(title, body, cls) {
+  const box = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast ' + (cls || '');
+  el.innerHTML = '<b>' + esc(title) + '</b><span class="muted">' + esc(body || '') + '</span>';
+  box.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; }, 5200);
+  setTimeout(() => el.remove(), 5700);
+}
+function modal(html) {
+  document.getElementById('modal').innerHTML =
+    '<button class="x" onclick="closeModal()">✕</button>' + html;
+  document.getElementById('overlay').classList.add('on');
+}
+function closeModal() { document.getElementById('overlay').classList.remove('on'); }
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target.id === 'overlay') closeModal();
+});
+const charts = {};
+function mkChart(id, cfg) {
+  if (charts[id]) charts[id].destroy();
+  const el = document.getElementById(id);
+  if (!el) return;
+  Chart.defaults.color = '#98a4ba';
+  Chart.defaults.borderColor = 'rgba(160,178,208,.08)';
+  Chart.defaults.font.family = "'Inter','Segoe UI',sans-serif";
+  /* charts live inside a sized .chartbox — never let them drive page height */
+  cfg.options = cfg.options || {};
+  cfg.options.responsive = true;
+  cfg.options.maintainAspectRatio = false;
+  charts[id] = new Chart(el, cfg);
+}
+/* Chart.js needs a nudge when the sidebar animates or the window resizes */
+function resizeCharts() { Object.values(charts).forEach(c => { try { c.resize(); } catch (e) {} }); }
+window.addEventListener('resize', () => { clearTimeout(window._rz);
+  window._rz = setTimeout(resizeCharts, 120); });
+
+/* ======================= preferences ======================= */
+const PREFS = JSON.parse(localStorage.getItem('athena_prefs') || '{}');
+function savePrefs() { localStorage.setItem('athena_prefs', JSON.stringify(PREFS)); }
+function applyPrefs() {
+  document.body.classList.toggle('rail', !!PREFS.rail);
+  document.body.classList.toggle('compact', !!PREFS.compact);
+  document.getElementById('tb-density').classList.toggle('act', !!PREFS.compact);
+  document.getElementById('tb-rail').classList.toggle('act', !!PREFS.rail);
+}
+document.getElementById('tb-rail').onclick = () => {
+  PREFS.rail = !PREFS.rail; savePrefs(); applyPrefs(); setTimeout(resizeCharts, 220);
+};
+document.getElementById('tb-density').onclick = () => {
+  PREFS.compact = !PREFS.compact; savePrefs(); applyPrefs(); setTimeout(resizeCharts, 60);
+};
+document.getElementById('tb-refresh').onclick = () => {
+  refreshGlobal();
+  if (LOADERS[CURRENT]) Promise.resolve(LOADERS[CURRENT]()).catch(() => {});
+  toast('Refreshed', TITLES[CURRENT], 'ok');
+};
+
+/* ======================= router ======================= */
+const TITLES = {overview:'Overview', live:'Real-Time Monitor', alerts:'Alert Queue',
+  users:'Monitored Users', cases:'Investigation Cases', intel:'Network Intel',
+  mitre:'MITRE ATT&CK', compliance:'Compliance', responses:'Response Log',
+  audit:'Audit Trail', data:'Data & Model', detect:'Detection Config', settings:'Settings'};
+const LOADERS = {overview:loadOverview, live:loadLive, alerts:loadAlerts, users:loadUsers,
+  cases:loadCases, intel:loadIntel, mitre:loadMitre, compliance:loadCompliance,
+  responses:loadResponses, audit:loadAudit, data:loadData, detect:loadDetect, settings:loadSettings};
+let CURRENT = 'overview';
+function show(v) {
+  if (!TITLES[v]) v = 'overview';
+  CURRENT = v;
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('on'));
+  document.getElementById('view-' + v).classList.add('on');
+  document.querySelectorAll('.nav a').forEach(a =>
+    a.classList.toggle('on', a.dataset.v === v));
+  document.getElementById('t-title').textContent = TITLES[v];
+  Promise.resolve((LOADERS[v] || function(){})()).catch(e =>
+    toast('Load failed', e.message, 'err'));
+}
+window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+
+/* clock + global refresh */
+setInterval(() => {
+  document.getElementById('clock').textContent =
+    new Date().toISOString().replace('T', ' ').slice(0, 19) + 'Z';
+}, 1000);
+async function refreshGlobal() {
+  try {
+    const s = await api('/api/summary');
+    const p = document.getElementById('p-threat');
+    p.className = 'pill threat-' + s.threat_level;
+    p.innerHTML = '<span class="dot" style="background:' +
+      (LVL_COLOR[s.threat_level] || '#3ddc97') + '"></span> THREAT ' + s.threat_level;
+    const ps = document.getElementById('p-stream');
+    ps.innerHTML = s.stream.running
+      ? '<span class="dot live"></span> STREAM LIVE'
+      : '<span class="dot idle"></span> STREAM IDLE';
+    document.getElementById('nav-alerts').textContent = s.flagged || '';
+    document.getElementById('nav-cases').textContent = s.cases_open || '';
+    document.getElementById('nav-live-dot').textContent = s.stream.running ? '●' : '';
+    return s;
+  } catch (e) { return null; }
+}
+setInterval(refreshGlobal, 12000);
+setInterval(() => {
+  if (LOADERS[CURRENT] && CURRENT !== 'live') {
+    Promise.resolve(LOADERS[CURRENT]()).catch(() => {});
+  }
+}, 30000);
+
+/* ======================= OVERVIEW ======================= */
+async function loadOverview() {
+  const s = await refreshGlobal();
+  if (!s) return;
+  const K = [
+    ['Total Events', fmtNum(s.total_events), 'rgba(212,175,95,.16)', 'data'],
+    ['Users Monitored', fmtNum(s.total_users), 'rgba(79,127,194,.2)', 'users'],
+    ['Flagged Users', fmtNum(s.flagged), 'rgba(255,77,106,.2)', 'alerts'],
+    ['Open Cases', fmtNum(s.cases_open), 'rgba(255,152,64,.18)', 'cases'],
+    ['Watchlist', fmtNum(s.watchlist_count), 'rgba(232,193,83,.16)', 'users'],
+    ['Responses', fmtNum(s.response_count), 'rgba(61,220,151,.15)', 'responses'],
+  ];
+  document.getElementById('ov-kpis').innerHTML = K.map(k =>
+    '<div class="card kpi clickable" onclick="location.hash=\'' + k[3] + '\'" ' +
+    'title="Go to ' + TITLES[k[3]] + '"><div class="glow" style="--gc:' + k[2] + '"></div>' +
+    '<div class="v">' + k[1] + '</div><div class="l">' + k[0] + '</div></div>').join('');
+
+  /* trend range is applied client-side over the series the API returns */
+  const range = +(document.getElementById('ov-range').value || 30);
+  let tl = s.trend_labels, tv = s.trend_values;
+  if (range > 0 && tl.length > range) { tl = tl.slice(-range); tv = tv.slice(-range); }
+  mkChart('ch-trend', {type: 'line', data: {labels: tl, datasets: [{
+      label: 'events', data: tv, tension: .35, fill: true, borderWidth: 2,
+      borderColor: '#d4af5f', pointRadius: 0, pointHoverRadius: 4,
+      pointHoverBackgroundColor: '#e8c87a',
+      backgroundColor: (ctx) => {
+        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 240);
+        g.addColorStop(0, 'rgba(212,175,95,.28)'); g.addColorStop(1, 'rgba(212,175,95,0)');
+        return g;
+      }}]},
+    options: {interaction: {mode: 'index', intersect: false},
+      plugins: {legend: {display: false},
+        tooltip: {callbacks: {label: c => fmtNum(c.parsed.y) + ' events'}}},
+      scales: {x: {ticks: {maxTicksLimit: 8, maxRotation: 0}, grid: {display: false}},
+        y: {beginAtZero: true, ticks: {maxTicksLimit: 6, callback: v => fmtNum(v)}}}}});
+  const rd = [s.counts.CRITICAL, s.counts.HIGH, s.counts.MEDIUM, s.counts.LOW];
+  const rtot = rd.reduce((a, b) => a + b, 0) || 1;
+  mkChart('ch-risk', {type: 'doughnut', data: {
+      labels: ['Critical', 'High', 'Medium', 'Low'],
+      datasets: [{data: rd, backgroundColor: ['#ff4d6a', '#ff9840', '#e8c153', '#3ddc97'],
+        borderColor: '#0a1020', borderWidth: 3, hoverOffset: 6}]},
+    options: {cutout: '66%', layout: {padding: 4},
+      plugins: {legend: {position: 'bottom',
+        labels: {boxWidth: 9, padding: 10, font: {size: 11}}},
+        tooltip: {callbacks: {label: c =>
+          c.label + ': ' + c.parsed + ' (' + (100 * c.parsed / rtot).toFixed(0) + '%)'}}}}});
+  document.getElementById('ov-top').innerHTML = (s.top_users.length ? s.top_users.map(u =>
+    '<div style="display:flex;align-items:center;gap:11px;padding:7px 0;border-bottom:1px solid rgba(160,178,208,.06);cursor:pointer" ' +
+    'onclick="investigate(\'' + esc(u.user) + '\')">' + ring(u.risk_score) +
+    '<div style="flex:1;min-width:0"><b>' + esc(u.user) + '</b>' +
+    '<div class="muted" style="font-size:11.5px">' + esc(u.department) + ' · ' +
+    esc(u.top_factor) + '</div></div>' + badge(u.risk_level) + '</div>').join('')
+    : '<div class="empty">Run an analysis to populate</div>');
+  document.getElementById('ov-range').onchange = loadOverview;
+  const m = s.model;
+  document.getElementById('ov-status').innerHTML =
+    '<div class="mono" style="font-size:12px;line-height:2">' +
+    'model: ' + (m.fitted ? '<span style="color:#3ddc97">TRAINED</span>' :
+                 '<span style="color:#ff9840">NOT TRAINED</span>') + '<br>' +
+    (m.fitted ? 'ensemble: ' + (m.ensemble || []).join(' + ') + '<br>' +
+      'trained: ' + esc(m.trained_at) + '<br>corpus: ' + fmtNum(m.train_events) +
+      ' events / ' + m.train_users + ' users<br>peer groups: ' + m.peer_groups +
+      ' · transitions: ' + fmtNum(m.transitions) + '<br>' : '') +
+    'stream: ' + (s.stream.running ? '<span style="color:#3ddc97">RUNNING (' +
+      s.stream.eps + ' eps)</span>' : 'stopped') + '<br>' +
+    'auth: ' + (s.auth_enabled ? 'API key required' : 'open (local)') + '</div>';
+}
+
+/* ======================= LIVE ======================= */
+let sse = null;
+function connectSSE() {
+  if (sse) return;
+  sse = new EventSource('/api/stream');
+  sse.onmessage = (m) => {
+    let d; try { d = JSON.parse(m.data); } catch (e) { return; }
+    handleStream(d);
+  };
+  sse.onerror = () => {};
+}
+function handleStream(d) {
+  if (d.type === 'alert') {
+    toast('⚠ ' + d.risk_level + ' — ' + d.user,
+      d.top_factor + ' (score ' + d.risk_score + ')', d.risk_level);
+    const box = document.getElementById('lv-notifs');
+    if (box.querySelector('.empty')) box.innerHTML = '';
+    const el = document.createElement('div');
+    el.className = 'notif ' + d.risk_level;
+    el.innerHTML = '<b>' + esc(d.user) + '</b> ' + badge(d.risk_level) +
+      '<div class="d">' + esc(d.top_factor) + ' — score ' + d.risk_score +
+      ' · ' + esc(d.department) + ' · ' + fmtTs(d.ts) + '</div>';
+    box.prepend(el);
+    while (box.children.length > 40) box.lastChild.remove();
+  } else if (d.type === 'event' && CURRENT === 'live') {
+    const feed = document.getElementById('lv-feed');
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = '<span class="t">' + (d.ts || '').slice(11, 19) + '</span>' +
+      '<span class="u">' + esc(d.user) + '</span><span class="a">' + esc(d.action) +
+      '</span><span class="dim">' + esc(d.source_ip) + ' ' + esc(d.country) +
+      (d.bytes ? ' · ' + fmtBytes(d.bytes) : '') +
+      (d.resource ? ' · ' + esc(d.resource) : '') + '</span>';
+    feed.prepend(el);
+    while (feed.children.length > 120) feed.lastChild.remove();
+  } else if (d.type === 'inject' && CURRENT === 'live') {
+    const feed = document.getElementById('lv-feed');
+    const el = document.createElement('div');
+    el.className = 'row inject';
+    el.innerHTML = '<span class="t">' + (d.ts || '').slice(11, 19) +
+      '</span><span>✱ scenario injected: ' + esc(d.scenario) + ' → ' + esc(d.user) + '</span>';
+    feed.prepend(el);
+  } else if (d.type === 'scored') {
+    if (CURRENT === 'live') updateLiveStats();
+  }
+}
+async function updateLiveStats() {
+  try {
+    const st = await api('/api/stream/status');
+    document.getElementById('lv-stats').innerHTML = [
+      ['State', st.running ? 'RUNNING' : 'STOPPED'],
+      ['Uptime', Math.floor(st.uptime_seconds) + 's'],
+      ['Events emitted', fmtNum(st.events_emitted)],
+      ['Scenarios injected', fmtNum(st.anomalies_injected)],
+      ['Roster', fmtNum(st.roster_size)],
+      ['Last scored', st.last_score_at ? ago(st.last_score_at) : '—'],
+    ].map(k => '<div class="card kpi"><div class="v" style="font-size:19px">' + k[1] +
+      '</div><div class="l">' + k[0] + '</div></div>').join('');
+  } catch (e) {}
+}
+async function loadLive() { connectSSE(); updateLiveStats(); }
+document.getElementById('lv-start').onclick = async () => {
+  const eps = +document.getElementById('lv-eps').value || 6;
+  const ip = (+document.getElementById('lv-inject').value || 6) / 100;
+  await api('/api/stream/start', {json: {eps: eps, inject_prob: ip}});
+  toast('Live engine started', eps + ' events/sec', 'ok');
+  updateLiveStats(); refreshGlobal();
+};
+document.getElementById('lv-stop').onclick = async () => {
+  await api('/api/stream/stop', {method: 'POST'});
+  toast('Live engine stopped', '', 'ok');
+  updateLiveStats(); refreshGlobal();
+};
+
+/* ======================= ALERTS ======================= */
+const STATUSES = ['new', 'triaged', 'investigating', 'escalated', 'contained',
+                  'resolved', 'false_positive', 'suppressed'];
+async function loadAlerts() {
+  const lvl = document.getElementById('al-level').value;
+  const q = document.getElementById('al-q').value;
+  const st = document.getElementById('al-status').value;
+  const alerts = await api('/api/alerts?min_level=' + lvl + '&q=' +
+    encodeURIComponent(q) + '&status=' + st);
+  const box = document.getElementById('al-list');
+  if (!alerts.length) {
+    box.innerHTML = '<div class="card empty"><div class="big">🦉</div>' +
+      'All quiet — no alerts match the current filters.<br><span class="dim">Generate data and run an analysis from Data &amp; Model.</span></div>';
+    return;
+  }
+  box.innerHTML = alerts.map(a => alertCard(a)).join('');
+}
+function sigBar(label, val, max, color) {
+  const pct = Math.min(100, 100 * val / (max || 1));
+  return '<div class="sig">' + label + ' <span class="mono">' +
+    (max === 1 ? (val * 100).toFixed(0) + '%' : (+val).toFixed(0)) +
+    '</span><div class="riskbar"><i style="width:' + pct + '%;background:' + color + '"></i></div></div>';
+}
+function alertCard(a) {
+  const key = a.dedup_key;
+  const facs = (a.explanations || []).map(e =>
+    '<div class="factor"><span class="w">+' + e.weight + '</span><div>' +
+    '<div class="fn">' + esc(e.factor) + '</div><div class="fd">' + esc(e.detail) + '</div></div></div>').join('');
+  const mitre = (a.mitre_techniques || []).map(t =>
+    '<a class="chip" target="_blank" href="https://attack.mitre.org/techniques/' +
+    t.replace('.', '/') + '/">' + t + '</a>').join('');
+  const dets = (a.detectors || []).map(d => '<span class="chip det">' + esc(d) + '</span>').join('');
+  const recs = (a.recommended_actions || []).map(r => '<li>' + esc(r) + '</li>').join('');
+  const opts = STATUSES.map(s => '<option value="' + s + '"' +
+    (a.status === s ? ' selected' : '') + '>' + s.replace('_', ' ') + '</option>').join('');
+  return '<div class="card acard ' + a.risk_level + '">' +
+    '<div class="head">' + ring(a.risk_score) +
+    '<div style="flex:1;min-width:180px"><div class="who">' + esc(a.user) + ' ' +
+    badge(a.risk_level) + '</div><div class="meta">' + esc(a.department) + ' · ' +
+    esc(a.role) + ' · ' + a.event_count + ' events · window ' +
+    (a.window_start || '').slice(0, 10) + ' · confidence ' +
+    Math.round((a.confidence || 1) * 100) + '%</div>' +
+    '<div style="margin-top:5px">' + dets + mitre + '</div></div>' +
+    '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">' +
+    '<select onchange="setStatus(\'' + key + '\',this.value)">' + opts + '</select>' +
+    '<input placeholder="assignee" value="' + esc(a.assignee || '') +
+    '" style="width:130px" onchange="setAssignee(\'' + key + '\',this.value)"></div></div>' +
+    '<div class="sigrow">' +
+    sigBar('ML ensemble', a.ml_score, 1, '#8fb8e8') +
+    sigBar('Rules', a.rule_score, 100, '#d4af5f') +
+    sigBar('Peer dev', a.peer_score, 1, '#e8c153') +
+    sigBar('Sequence', a.sequence_score, 1, '#c084fc') + '</div>' +
+    '<div class="factors">' + facs + '</div>' +
+    (recs ? '<div class="recs"><b style="font-size:11px;letter-spacing:1px;color:var(--muted)">RECOMMENDED</b><ul>' +
+      recs + '</ul></div>' : '') +
+    '<div class="acts">' +
+    '<button class="sm pri" onclick="investigate(\'' + esc(a.user) + '\')">🔍 Investigate</button>' +
+    '<button class="sm" onclick="respondMenu(\'' + esc(a.user) + '\')">⛨ Respond…</button>' +
+    '<button class="sm" onclick="autoRespond(\'' + esc(a.user) + '\')">⚡ Auto-respond</button>' +
+    '<button class="sm" onclick="newCaseFor(\'' + esc(a.user) + '\',\'' + key + '\',\'' +
+      a.risk_level + '\')">▤ Open case</button>' +
+    '<span style="flex:1"></span>' +
+    '<button class="sm" style="border-color:rgba(61,220,151,.4);color:#b9f3d8" ' +
+      'onclick="feedback(\'' + key + '\',\'true_positive\')">✓ Confirm</button>' +
+    '<button class="sm" style="border-color:rgba(255,77,106,.35);color:#ffb1bd" ' +
+      'onclick="feedback(\'' + key + '\',\'false_positive\')">✗ False positive</button>' +
+    '</div></div>';
+}
+async function setStatus(key, status) {
+  await api('/api/alert/' + encodeURIComponent(key) + '/status', {json: {status: status}});
+  toast('Alert updated', key + ' → ' + status, 'ok'); refreshGlobal();
+}
+async function setAssignee(key, who) {
+  await api('/api/alert/' + encodeURIComponent(key) + '/status',
+    {json: {status: 'triaged', assignee: who}});
+  toast('Assigned', key + ' → ' + who, 'ok');
+}
+async function feedback(key, verdict) {
+  await api('/api/alert/' + encodeURIComponent(key) + '/feedback', {json: {verdict: verdict}});
+  toast('Feedback recorded', verdict.replace('_', ' '), 'ok');
+  loadAlerts();
+}
+['al-level', 'al-status'].forEach(id =>
+  document.getElementById(id).addEventListener('change', loadAlerts));
+document.getElementById('al-q').addEventListener('input', () => {
+  clearTimeout(window._alq); window._alq = setTimeout(loadAlerts, 300);
+});
+document.getElementById('al-analyze').onclick = runAnalysis;
+async function runAnalysis() {
+  try {
+    toast('Analysis started', 'scoring all users…');
+    const r = await api('/api/analyze', {method: 'POST'});
+    toast('Analysis complete', r.analyzed + ' users scored' +
+      (r.forwarded ? ', ' + r.forwarded + ' forwarded to SIEM' : ''), 'ok');
+    refreshGlobal();
+    if (LOADERS[CURRENT]) LOADERS[CURRENT]();
+  } catch (e) { toast('Analysis failed', e.message, 'err'); }
+}
+
+/* ======================= responses ======================= */
+async function respondMenu(user) {
+  const actions = await api('/api/response/actions');
+  modal('<h2 style="margin-bottom:4px">⛨ Respond — ' + esc(user) + '</h2>' +
+    '<p class="muted" style="font-size:12px;margin-bottom:14px">Actions are simulated unless enforcement ' +
+    'is enabled in Settings; every dispatch is audited and forwarded to configured integrations.</p>' +
+    actions.map(a =>
+      '<div style="display:flex;gap:11px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(160,178,208,.07)">' +
+      '<button class="sm pri" style="min-width:150px" onclick="doRespond(\'' + esc(user) + '\',\'' +
+      a.action + '\')">' + a.action.replace(/_/g, ' ') + '</button>' +
+      '<span class="muted" style="font-size:12px">' + esc(a.description) + '</span></div>').join(''));
+}
+async function doRespond(user, action) {
+  const r = await api('/api/respond', {json: {user: user, action: action}});
+  toast('Response dispatched (' + r.mode + ')', user + ' → ' + action, 'ok');
+  closeModal();
+}
+async function autoRespond(user) {
+  const r = await api('/api/respond/auto/' + encodeURIComponent(user), {method: 'POST'});
+  toast('Auto-response', r.results.length + ' action(s) dispatched for ' + user, 'ok');
+}
+async function loadResponses() {
+  const rows = await api('/api/responses');
+  document.getElementById('rs-body').innerHTML = rows.length ? rows.map(r =>
+    '<tr><td class="mono dim">' + fmtTs(r.created_at) + '</td><td><b>' + esc(r.user) +
+    '</b></td><td class="mono">' + esc(r.action) + '</td><td>' +
+    '<span class="badge ' + (r.mode === 'ENFORCED' ? 'b-CRITICAL' : 'b-LOW') + '">' +
+    r.mode + '</span></td><td class="muted">' + esc(r.detail) + '</td></tr>').join('')
+    : '<tr><td colspan="5" class="empty">No responses dispatched yet</td></tr>';
+}
+
+/* ======================= USERS ======================= */
+async function loadUsers() {
+  const q = document.getElementById('us-q').value;
+  const dept = document.getElementById('us-dept').value;
+  const lvl = document.getElementById('us-level').value;
+  const results = await Promise.all([
+    api('/api/users?q=' + encodeURIComponent(q) + '&department=' +
+        encodeURIComponent(dept) + '&min_level=' + lvl),
+    api('/api/departments')]);
+  const users = results[0], depts = results[1];
+  const sel = document.getElementById('us-dept');
+  if (sel.options.length <= 1)
+    depts.forEach(d => sel.add(new Option(d, d)));
+  document.getElementById('us-body').innerHTML = users.length ? users.map(u =>
+    '<tr style="cursor:pointer" onclick="investigate(\'' + esc(u.user) + '\')">' +
+    '<td><span class="watchstar' + (u.watchlisted ? ' on' : '') + '" title="watchlist" ' +
+    'onclick="event.stopPropagation();toggleWatch(\'' + esc(u.user) + '\',' + u.watchlisted + ')">★</span></td>' +
+    '<td><b>' + esc(u.user) + '</b></td><td>' + esc(u.department) + '</td><td>' +
+    esc(u.role) + '</td><td style="min-width:110px"><div style="display:flex;gap:8px;align-items:center">' +
+    '<span class="mono">' + u.risk_score.toFixed(0) + '</span>' +
+    '<div class="riskbar" style="flex:1"><i style="width:' + Math.min(100, u.risk_score) +
+    '%;background:' + ringColor(u.risk_score) + '"></i></div></div></td>' +
+    '<td>' + badge(u.risk_level) + '</td><td class="mono dim">' + esc(u.status || '—') +
+    '</td><td class="muted">' + esc(u.top_factor) + '</td><td class="mono">' +
+    fmtNum(u.event_count) + '</td><td class="dim">' + ago(u.last_seen) + '</td></tr>').join('')
+    : '<tr><td colspan="10" class="empty">No users match</td></tr>';
+}
+['us-dept', 'us-level'].forEach(id =>
+  document.getElementById(id).addEventListener('change', loadUsers));
+document.getElementById('us-q').addEventListener('input', () => {
+  clearTimeout(window._usq); window._usq = setTimeout(loadUsers, 300);
+});
+async function toggleWatch(user, on) {
+  if (on) {
+    await api('/api/watchlist/' + encodeURIComponent(user), {method: 'DELETE'});
+    toast('Watchlist', user + ' removed', 'ok');
+  } else {
+    const reason = prompt('Reason for watchlisting ' + user + ':', 'heightened scrutiny');
+    if (reason == null) return;
+    await api('/api/watchlist', {json: {user: user, reason: reason}});
+    toast('Watchlist', user + ' added — risk ×1.35 on next analysis', 'ok');
+  }
+  loadUsers();
+}
+
+/* ======================= INVESTIGATE modal ======================= */
+async function investigate(user) {
+  const d = await api('/api/user/' + encodeURIComponent(user));
+  const a = d.alert;
+  let head = '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">' +
+    (a ? ring(a.risk_score, true) : ring(0, true)) +
+    '<div style="flex:1"><h2>' + esc(user) + ' ' + (a ? badge(a.risk_level) : '') +
+    (d.watchlisted ? ' <span class="chip" style="color:#f5e5b0;border-color:rgba(232,193,83,.4)">★ watchlisted</span>' : '') +
+    '</h2><div class="muted">' + (a ? esc(a.department) + ' · ' + esc(a.role) + ' · ' : '') +
+    fmtNum(d.event_total) + ' events on record</div>' +
+    (a ? '<div style="margin-top:6px">' + (a.mitre_techniques || []).map(t =>
+      '<a class="chip" target="_blank" href="https://attack.mitre.org/techniques/' +
+      t.replace('.', '/') + '/">' + t + '</a>').join('') + '</div>' : '') +
+    '</div><div style="display:flex;flex-direction:column;gap:7px">' +
+    '<button class="sm pri" onclick="respondMenu(\'' + esc(user) + '\')">⛨ Respond…</button>' +
+    (a ? '<button class="sm" onclick="newCaseFor(\'' + esc(user) + '\',\'' + a.dedup_key +
+      '\',\'' + a.risk_level + '\')">▤ Open case</button>' : '') + '</div></div>';
+  let factors = a ? '<div class="factors" style="margin-top:14px">' +
+    (a.explanations || []).map(e => '<div class="factor"><span class="w">+' + e.weight +
+      '</span><div><div class="fn">' + esc(e.factor) + '</div><div class="fd">' +
+      esc(e.detail) + '</div></div></div>').join('') + '</div>' : '';
+  let contribs = a && (a.contributions || []).length ?
+    '<h3 style="margin:14px 0 8px;font-size:11px;letter-spacing:1.6px;color:var(--gold-dim)">FEATURE CONTRIBUTIONS</h3>' +
+    a.contributions.map(c => '<div class="contrib"><span class="cn">' + esc(c.feature) +
+      '</span><div class="cb"><i style="width:' + Math.min(100, Math.abs(c.deviation) * 12) +
+      '%;background:' + (c.direction === 'high' ? '#ff9840' : '#4f7fc2') + '"></i></div>' +
+      '<span class="cv">' + (c.deviation > 0 ? '+' : '') + c.deviation + 'σ</span></div>').join('') : '';
+  let chartsHtml = '<div class="grid two" style="margin-top:16px">' +
+    '<div class="card"><h3>Hourly Activity Pattern</h3><canvas id="ch-hours" height="130"></canvas></div>' +
+    '<div class="card"><h3>Daily Activity (30d)</h3><canvas id="ch-daily" height="130"></canvas></div></div>';
+  let events = '<h3 style="margin:16px 0 8px;font-size:11px;letter-spacing:1.6px;color:var(--gold-dim)">RECENT EVENTS</h3>' +
+    '<div style="max-height:230px;overflow-y:auto"><table><thead><tr><th>Time</th><th>Action</th>' +
+    '<th>Resource</th><th>Source</th><th>Bytes</th></tr></thead><tbody>' +
+    d.events.slice().reverse().map(e => '<tr><td class="mono dim">' + fmtTs(e.timestamp) +
+      '</td><td class="mono">' + esc(e.action) + '</td><td class="muted">' + esc(e.resource || '—') +
+      '</td><td class="mono dim">' + esc(e.source_ip) + ' ' + esc(e.country) + '</td><td class="mono">' +
+      (e.bytes ? fmtBytes(e.bytes) : '—') + '</td></tr>').join('') + '</tbody></table></div>';
+  let notes = '<h3 style="margin:16px 0 8px;font-size:11px;letter-spacing:1.6px;color:var(--gold-dim)">ANALYST NOTES</h3>' +
+    '<div id="inv-notes">' + d.notes.map(n => '<div class="factor"><div><div class="fd">' +
+      esc(n.body) + '</div><div class="dim" style="font-size:10.5px;margin-top:3px">' +
+      esc(n.author) + ' · ' + fmtTs(n.created_at) + '</div></div></div>').join('') + '</div>' +
+    '<div class="formrow" style="margin-top:9px"><input id="inv-note" placeholder="add note…" style="flex:1">' +
+    '<button class="sm pri" onclick="addUserNote(\'' + esc(user) + '\')">Add</button></div>';
+  modal(head + factors + contribs + chartsHtml + events + notes);
+  mkChart('ch-hours', {type: 'bar', data: {labels: Array.from(Array(24).keys()).map(h => h + 'h'),
+    datasets: [{data: d.hour_histogram, backgroundColor: d.hour_histogram.map((v, h) =>
+      (h < 8 || h >= 19) ? 'rgba(255,152,64,.75)' : 'rgba(79,127,194,.7)'), borderRadius: 3}]},
+    options: {plugins: {legend: {display: false}}, scales: {x: {ticks: {maxTicksLimit: 12}}}}});
+  mkChart('ch-daily', {type: 'line', data: {labels: d.daily_labels, datasets: [
+    {label: 'events', data: d.daily_events, borderColor: '#d4af5f', tension: .3,
+     pointRadius: 0, borderWidth: 2, yAxisID: 'y'},
+    {label: 'bytes', data: d.daily_bytes, borderColor: '#4f7fc2', tension: .3,
+     pointRadius: 0, borderWidth: 2, yAxisID: 'y1'}]},
+    options: {plugins: {legend: {labels: {boxWidth: 10}}},
+      scales: {x: {ticks: {maxTicksLimit: 7}}, y: {beginAtZero: true},
+        y1: {position: 'right', beginAtZero: true, grid: {display: false},
+          ticks: {callback: v => fmtBytes(v)}}}}});
+}
+async function addUserNote(user) {
+  const el = document.getElementById('inv-note');
+  if (!el.value.trim()) return;
+  await api('/api/notes/user/' + encodeURIComponent(user), {json: {body: el.value}});
+  toast('Note added', '', 'ok');
+  investigate(user);
+}
+
+/* ======================= CASES ======================= */
+const CASE_STATUSES = ['open', 'in_progress', 'pending_hr', 'pending_legal',
+  'closed_confirmed', 'closed_unsubstantiated'];
+const VERDICTS = ['unknown', 'true_positive', 'false_positive', 'benign_true_positive'];
+async function loadCases() {
+  const open = document.getElementById('cs-open').checked;
+  const cases = await api('/api/cases?open_only=' + open);
+  const box = document.getElementById('cs-list');
+  if (!cases.length) {
+    box.innerHTML = '<div class="card empty"><div class="big">▤</div>No cases yet — open one from an alert.</div>';
+    return;
+  }
+  box.innerHTML = cases.map(c => {
+    const sopts = CASE_STATUSES.map(s => '<option value="' + s + '"' +
+      (c.status === s ? ' selected' : '') + '>' + s.replace(/_/g, ' ') + '</option>').join('');
+    const vopts = VERDICTS.map(v => '<option value="' + v + '"' +
+      (c.verdict === v ? ' selected' : '') + '>' + v.replace(/_/g, ' ') + '</option>').join('');
+    return '<div class="card acard ' + c.severity + '" style="margin-bottom:12px">' +
+      '<div class="head"><div style="flex:1;min-width:200px"><div class="who">#' + c.id + ' · ' +
+      esc(c.title) + ' ' + badge(c.severity) + '</div>' +
+      '<div class="meta">subject <b>' + esc(c.subject_user) + '</b> · owner ' +
+      esc(c.owner || '—') + ' · opened ' + ago(c.created_at) + ' · ' +
+      (c.alert_keys || []).length + ' linked alert(s)' +
+      ((c.tags || []).length ? ' · ' + c.tags.map(t => '<span class="chip">' + esc(t) +
+        '</span>').join('') : '') + '</div>' +
+      (c.summary ? '<div class="muted" style="margin-top:6px;font-size:12.5px">' +
+        esc(c.summary) + '</div>' : '') + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px">' +
+      '<select onchange="updateCase(' + c.id + ',{status:this.value})">' + sopts + '</select>' +
+      '<select onchange="updateCase(' + c.id + ',{verdict:this.value})">' + vopts + '</select>' +
+      '</div></div>' +
+      '<div class="acts"><button class="sm" onclick="openCase(' + c.id + ')">Open details</button>' +
+      '<button class="sm" onclick="investigate(\'' + esc(c.subject_user) + '\')">🔍 Subject</button></div></div>';
+  }).join('');
+}
+document.getElementById('cs-open').addEventListener('change', loadCases);
+document.getElementById('cs-new').onclick = () => newCaseFor('', null, 'MEDIUM');
+function newCaseFor(user, alertKey, severity) {
+  closeModal();
+  modal('<h2>▤ New Case</h2><div class="formrow" style="margin-top:14px">' +
+    '<label class="f">title <input id="nc-title" style="width:280px" value="' +
+    (user ? 'Investigation — ' + esc(user) : '') + '"></label>' +
+    '<label class="f">subject user <input id="nc-user" value="' + esc(user) + '"></label>' +
+    '<label class="f">severity <select id="nc-sev">' +
+    ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(l => '<option' +
+      (l === severity ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
+    '<label class="f">owner <input id="nc-owner" placeholder="analyst"></label></div>' +
+    '<label class="f" style="margin-bottom:12px">summary <textarea id="nc-sum" rows="3"></textarea></label>' +
+    '<input type="hidden" id="nc-key" value="' + (alertKey || '') + '">' +
+    '<button class="pri" onclick="createCase()">Create case</button>');
+}
+async function createCase() {
+  const c = await api('/api/cases', {json: {
+    title: document.getElementById('nc-title').value || 'Untitled case',
+    subject_user: document.getElementById('nc-user').value || 'unknown',
+    severity: document.getElementById('nc-sev').value,
+    owner: document.getElementById('nc-owner').value,
+    summary: document.getElementById('nc-sum').value,
+    alert_key: document.getElementById('nc-key').value || null}});
+  toast('Case created', '#' + c.id + ' ' + c.title, 'ok');
+  closeModal(); refreshGlobal();
+  location.hash = 'cases'; loadCases();
+}
+async function updateCase(id, patch) {
+  await api('/api/case/' + id, {method: 'PATCH', json: patch});
+  toast('Case updated', '#' + id, 'ok'); refreshGlobal();
+}
+async function openCase(id) {
+  const c = await api('/api/case/' + id);
+  modal('<h2>#' + c.id + ' · ' + esc(c.title) + ' ' + badge(c.severity) + '</h2>' +
+    '<div class="muted" style="margin:6px 0 12px">subject <b>' + esc(c.subject_user) +
+    '</b> · status <span class="mono">' + c.status + '</span> · verdict <span class="mono">' +
+    c.verdict + '</span> · opened ' + fmtTs(c.created_at) + '</div>' +
+    (c.summary ? '<p style="margin-bottom:12px">' + esc(c.summary) + '</p>' : '') +
+    '<h3 style="font-size:11px;letter-spacing:1.6px;color:var(--gold-dim);margin-bottom:8px">LINKED ALERTS</h3>' +
+    (c.alerts.length ? c.alerts.map(a => '<div class="factor"><span class="w">' +
+      a.risk_score + '</span><div><div class="fn">' + esc(a.user) + ' ' + badge(a.risk_level) +
+      '</div><div class="fd">' + esc(a.summary || '') + '</div></div></div>').join('')
+      : '<div class="dim" style="font-size:12px">none</div>') +
+    '<h3 style="font-size:11px;letter-spacing:1.6px;color:var(--gold-dim);margin:14px 0 8px">CASE NOTES</h3>' +
+    c.notes.map(n => '<div class="factor"><div><div class="fd">' + esc(n.body) +
+      '</div><div class="dim" style="font-size:10.5px;margin-top:3px">' + esc(n.author) +
+      ' · ' + fmtTs(n.created_at) + '</div></div></div>').join('') +
+    '<div class="formrow" style="margin-top:10px"><input id="cn-note" placeholder="add case note…" style="flex:1">' +
+    '<button class="sm pri" onclick="addCaseNote(' + c.id + ')">Add</button></div>');
+}
+async function addCaseNote(id) {
+  const el = document.getElementById('cn-note');
+  if (!el.value.trim()) return;
+  await api('/api/notes/case/' + id, {json: {body: el.value}});
+  openCase(id);
+}
+
+/* ======================= INTEL ======================= */
+async function loadIntel() {
+  const d = await api('/api/geo');
+  const total = d.points.reduce((s, p) => s + p.count, 0) || 1;
+  document.getElementById('in-countries').innerHTML = d.points.length ?
+    d.points.slice(0, 14).map(p =>
+      '<div style="display:flex;align-items:center;gap:10px;padding:5px 0">' +
+      '<span class="mono" style="min-width:34px">' + esc(p.code) + '</span>' +
+      '<div class="riskbar" style="flex:1"><i style="width:' +
+      Math.max(2, 100 * p.count / total) + '%;background:' +
+      (p.high_risk ? 'var(--crit)' : 'linear-gradient(90deg,#d4af5f,#4f7fc2)') +
+      '"></i></div><span class="mono dim" style="min-width:70px;text-align:right">' +
+      fmtNum(p.count) + '</span>' +
+      (p.high_risk ? '<span class="badge b-CRITICAL">HIGH RISK</span>' : '') + '</div>')
+    .join('') : '<div class="empty">No events yet</div>';
+  const catColors = {private: '#3ddc97', unknown: '#98a4ba', tor: '#ff4d6a',
+    vpn: '#ff9840', hosting: '#e8c153', cloud: '#4f7fc2', documentation: '#8fb8e8'};
+  document.getElementById('in-cats').innerHTML = Object.entries(d.ip_categories)
+    .map(kv => '<span class="chip" style="border-color:' + catColors[kv[0]] +
+      ';color:' + catColors[kv[0]] + '">' + kv[0] + ' · ' + kv[1] + '</span>').join(' ');
+  document.getElementById('in-flagged').innerHTML = d.flagged_ips.length ?
+    '<table><thead><tr><th>IP</th><th>User</th><th>Category</th><th>Label</th></tr></thead><tbody>' +
+    d.flagged_ips.map(f => '<tr><td class="mono">' + esc(f.ip) + '</td><td>' + esc(f.user) +
+      '</td><td><span class="badge b-HIGH">' + esc(f.category) + '</span></td><td class="muted">' +
+      esc(f.label) + '</td></tr>').join('') + '</tbody></table>'
+    : '<div class="dim" style="font-size:12px">No anonymised source addresses observed.</div>';
+}
+document.getElementById('ip-go').onclick = async () => {
+  const ip = document.getElementById('ip-q').value.trim();
+  if (!ip) return;
+  const d = await api('/api/ip/' + encodeURIComponent(ip));
+  document.getElementById('ip-result').innerHTML = '<div class="card" style="display:flex;gap:14px;align-items:center">' +
+    '<span class="mono" style="font-size:15px">' + esc(d.ip) + '</span>' +
+    '<span class="badge ' + (d.risk >= .6 ? 'b-CRITICAL' : d.risk >= .3 ? 'b-HIGH' : 'b-LOW') +
+    '">' + esc(d.category.toUpperCase()) + '</span><span class="muted">' + esc(d.label) +
+    '</span><span class="mono dim">risk ' + (d.risk * 100).toFixed(0) + '%</span></div>';
+};
+
+/* ======================= MITRE ======================= */
+async function loadMitre() {
+  const m = await api('/api/mitre');
+  document.getElementById('mt-sub').textContent = m.covered_techniques + ' of ' +
+    m.total_techniques + ' observable techniques covered (' + m.coverage_pct + '%)' +
+    ' — red cells have live alert evidence';
+  document.getElementById('mt-matrix').innerHTML = m.tactics.map(t =>
+    '<div class="tcol"><div class="th">' + esc(t.tactic) +
+    '<span class="cov">' + t.covered + '/' + t.total + '</span></div>' +
+    t.techniques.map(c =>
+      '<a class="tcell' + (c.hits ? ' hit' : c.covered ? ' cov' : '') + '" target="_blank" href="' +
+      esc(c.url) + '" title="' + esc(c.description) + ' — detectors: ' +
+      (c.detectors.join(', ') || 'none') + '">' +
+      (c.hits ? '<span class="hits">' + c.hits + '×</span>' : '') +
+      '<span class="tid">' + c.id + '</span><br>' + esc(c.name) + '</a>').join('') +
+    '</div>').join('');
+}
+
+/* ======================= COMPLIANCE ======================= */
+async function loadCompliance() {
+  const r = await api('/api/compliance');
+  document.getElementById('cp-sub').textContent = r.total_covered + ' of ' +
+    r.total_controls + ' mapped controls evidenced (' + r.overall_pct + '%)';
+  document.getElementById('cp-list').innerHTML = r.frameworks.map(f =>
+    '<div class="card"><h3>' + esc(f.name) +
+    '<span class="rt mono">' + f.coverage_pct + '%</span></h3>' +
+    '<div class="dim" style="font-size:11px">' + esc(f.authority) + '</div>' +
+    '<div class="covbar"><i style="width:' + f.coverage_pct + '%"></i></div>' +
+    '<div class="muted" style="font-size:12px;margin-bottom:8px">' + esc(f.description) + '</div>' +
+    '<details><summary style="cursor:pointer;font-size:12px;color:#e5cf96">' +
+    f.controls.length + ' controls · ' + f.gaps.length + ' gaps</summary>' +
+    '<div style="margin-top:8px">' + f.controls.map(c =>
+      '<div class="ctl"><span class="st ' + c.status + '">' + c.status.toUpperCase() +
+      '</span><span class="mono" style="min-width:96px;font-size:10.5px">' + esc(c.control) +
+      '</span><span style="flex:1" title="' + esc(c.summary) + '">' + esc(c.title) + '</span>' +
+      (c.evidence_alerts ? '<span class="mono dim">' + c.evidence_alerts + ' alerts</span>' : '') +
+      '</div>').join('') + '</div></details></div>').join('');
+}
+
+/* ======================= AUDIT ======================= */
+async function loadAudit() {
+  const rows = await api('/api/audit?limit=300');
+  document.getElementById('au-body').innerHTML = rows.length ? rows.map(r =>
+    '<tr><td class="mono dim">' + fmtTs(r.created_at) + '</td><td>' + esc(r.actor) +
+    '</td><td class="mono">' + esc(r.action) + '</td><td class="mono">' + esc(r.target || '—') +
+    '</td><td class="muted">' + esc(r.detail || '') + '</td><td class="mono dim">' +
+    esc(r.source_ip || '') + '</td></tr>').join('')
+    : '<tr><td colspan="6" class="empty">No operator actions recorded yet</td></tr>';
+}
+
+/* ======================= DATA & MODEL ======================= */
+async function loadData() {
+  const s = await api('/api/summary');
+  const m = s.model;
+  document.getElementById('dm-model').innerHTML =
+    '<div class="mono" style="font-size:12px;line-height:2">' +
+    (m.fitted ?
+      'status: <span style="color:#3ddc97">TRAINED</span><br>' +
+      'ensemble: ' + (m.ensemble || []).join(' + ') + '<br>' +
+      'trained at: ' + esc(m.trained_at) + '<br>' +
+      'corpus: ' + fmtNum(m.train_events) + ' events · ' + m.train_users + ' users<br>' +
+      'features: ' + m.features + ' · peer groups: ' + m.peer_groups + '<br>' +
+      'action transitions learned: ' + fmtNum(m.transitions)
+      : 'status: <span style="color:#ff9840">NOT TRAINED</span><br>' +
+        'Train on the current corpus to enable live scoring.') + '</div>';
+  const ds = await api('/api/datasets');
+  document.getElementById('ds-list').innerHTML = ds.map(d =>
+    '<div style="padding:9px 0;border-bottom:1px solid rgba(160,178,208,.07)">' +
+    '<b>' + esc(d.name) + '</b> <span class="chip det">' + esc(d.key) + '</span>' +
+    '<div class="muted" style="font-size:12px;margin:4px 0 7px">' + esc(d.description) + '</div>' +
+    (d.key === 'cert'
+      ? '<div class="formrow"><input id="ds-path" placeholder="/path/to/cert/r4.2 (or examples/cert_sample)" style="flex:1">' +
+        '<button class="sm pri" onclick="loadDs(\'cert\')">Load</button></div>'
+      : '<button class="sm pri" onclick="loadDs(\'' + esc(d.key) + '\')">Load</button>') +
+    '</div>').join('');
+}
+async function loadDs(key) {
+  try {
+    const body = {key: key, reset: true};
+    if (key === 'cert') {
+      body.path = document.getElementById('ds-path').value.trim();
+      if (!body.path) { toast('Path required', 'point at a CERT release directory', 'err'); return; }
+    }
+    toast('Loading dataset…', key);
+    const r = await api('/api/dataset/load', {json: body});
+    toast('Dataset loaded', fmtNum(r.ingested) + ' events / ' + r.users + ' users', 'ok');
+    loadData(); refreshGlobal();
+  } catch (e) { toast('Dataset load failed', e.message, 'err'); }
+}
+document.getElementById('g-go').onclick = async () => {
+  const r = await api('/api/generate', {json: {
+    users: +document.getElementById('g-users').value || 30,
+    days: +document.getElementById('g-days').value || 30,
+    seed: +document.getElementById('g-seed').value || 1337}});
+  document.getElementById('g-out').textContent = r.ingested + ' events ingested · planted: ' +
+    r.planted.map(p => p.user + ' (' + p.scenario + ')').join(', ');
+  toast('Synthetic data generated', fmtNum(r.ingested) + ' events', 'ok');
+  refreshGlobal();
+};
+document.getElementById('up-go').onclick = async () => {
+  const f = document.getElementById('up-file').files[0];
+  if (!f) { toast('Choose a file first', '', 'err'); return; }
+  const fd = new FormData(); fd.append('file', f);
+  const reset = document.getElementById('up-reset').checked;
+  try {
+    const r = await api('/api/ingest?reset=' + reset, {method: 'POST', body: fd});
+    document.getElementById('up-out').textContent = r.ingested + ' events from ' + r.filename;
+    toast('File ingested', r.ingested + ' events', 'ok'); refreshGlobal();
+  } catch (e) { toast('Ingest failed', e.message, 'err'); }
+};
+document.getElementById('dm-train').onclick = async () => {
+  try {
+    toast('Training…', 'fitting the ensemble');
+    const r = await api('/api/train', {method: 'POST'});
+    toast('Model trained', (r.model.ensemble || []).join(' + '), 'ok');
+    loadData();
+  } catch (e) { toast('Training failed', e.message, 'err'); }
+};
+document.getElementById('dm-analyze').onclick = runAnalysis;
+
+/* ======================= DETECTION CONFIG ======================= */
+const TH_FIELDS = [
+  ['medium', 'MEDIUM ≥'], ['high', 'HIGH ≥'], ['critical', 'CRITICAL ≥'],
+  ['contamination', 'contamination'], ['business_start_hour', 'work start (h)'],
+  ['business_end_hour', 'work end (h)'], ['failed_login_burst', 'failed-login burst'],
+  ['data_exfil_zscore', 'exfil σ'], ['mass_access_files', 'mass-access files'],
+  ['mass_delete_files', 'mass-delete files'], ['lateral_host_count', 'lateral hosts'],
+  ['dormancy_days', 'dormancy days'], ['peer_deviation_sigma', 'peer σ'],
+  ['weight_ml', 'fusion: ML'], ['weight_rules', 'fusion: rules'],
+  ['weight_peer', 'fusion: peer'], ['weight_sequence', 'fusion: sequence']];
+async function loadDetect() {
+  const d = await api('/api/detections');
+  document.getElementById('dt-list').innerHTML = d.detectors.map(x =>
+    '<div class="card det"><div class="dh"><b>' + esc(x.name) + '</b>' +
+    '<span class="kind">' + esc(x.type) + '</span>' +
+    '<label class="switch"><input type="checkbox"' + (x.enabled ? ' checked' : '') +
+    ' onchange="updDetector(\'' + x.key + '\',{enabled:this.checked})"><i></i></label></div>' +
+    '<p>' + esc(x.detail) + '</p>' +
+    '<div>' + x.mitre.map(t => '<span class="chip">' + t + '</span>').join('') +
+    '<span class="chip det">max ' + x.max_points + ' pts</span></div>' +
+    '<div style="display:flex;gap:10px;align-items:center;margin-top:10px">' +
+    '<span class="dim" style="font-size:11px">weight</span>' +
+    '<input type="range" min="0.1" max="3" step="0.05" value="' + x.weight +
+    '" style="flex:1" oninput="this.nextElementSibling.textContent=(+this.value).toFixed(2)+\'×\'" ' +
+    'onchange="updDetector(\'' + x.key + '\',{weight:+this.value})">' +
+    '<span class="mono" style="min-width:46px">' + x.weight.toFixed(2) + '×</span></div></div>').join('');
+  const th = d.thresholds;
+  document.getElementById('dt-thform').innerHTML = TH_FIELDS.map(f =>
+    '<label class="f">' + f[1] + ' <input data-th="' + f[0] + '" type="number" step="any" value="' +
+    th[f[0]] + '" style="width:96px"></label>').join('');
+}
+async function updDetector(key, patch) {
+  patch.key = key;
+  await api('/api/detections', {json: patch});
+  toast('Detector updated', key, 'ok');
+}
+document.getElementById('dt-save').onclick = async () => {
+  const th = {};
+  document.querySelectorAll('[data-th]').forEach(el => th[el.dataset.th] = +el.value);
+  await api('/api/config', {json: {thresholds: th}});
+  toast('Thresholds saved', 're-run analysis to apply', 'ok');
+};
+
+/* ======================= SETTINGS ======================= */
+const INTEG_FIELDS = [
+  ['webhook_url', 'SOAR webhook URL'], ['slack_webhook', 'Slack webhook'],
+  ['teams_webhook', 'Teams webhook'], ['splunk_hec_url', 'Splunk HEC URL'],
+  ['splunk_hec_token', 'Splunk HEC token'], ['elastic_url', 'Elastic URL'],
+  ['elastic_api_key', 'Elastic API key'], ['elastic_index', 'Elastic index'],
+  ['syslog_host', 'Syslog host'], ['syslog_port', 'Syslog port'],
+  ['syslog_format', 'Syslog format (cef/leef)'], ['pagerduty_routing_key', 'PagerDuty key'],
+  ['smtp_host', 'SMTP host'], ['smtp_from', 'SMTP from'],
+];
+async function loadSettings() {
+  const c = await api('/api/config');
+  document.getElementById('st-org').value = c.organization || '';
+  document.getElementById('st-tz').value = c.timezone || 'UTC';
+  document.getElementById('st-auth').checked = !!c.security.auth_enabled;
+  document.getElementById('st-enforce').checked = !!c.security.allow_enforced_response;
+  document.getElementById('st-rev').value = c.retention.event_days;
+  document.getElementById('st-ral').value = c.retention.alert_days;
+  document.getElementById('st-rau').value = c.retention.audit_days;
+  document.getElementById('st-minfwd').value = c.integrations.min_forward_level || 'HIGH';
+  document.getElementById('st-integ').innerHTML = INTEG_FIELDS.map(f =>
+    '<label class="f">' + f[1] + ' <input data-integ="' + f[0] + '" value="' +
+    esc(c.integrations[f[0]] == null ? '' : c.integrations[f[0]]) + '"></label>').join('');
+  loadUsers2();
+  loadSessions();
+}
+async function loadSessions() {
+  let ss = [];
+  try { ss = await api('/api/sessions'); }
+  catch (e) { document.getElementById('st-sessions-card').style.display = 'none'; return; }
+  document.getElementById('st-sessions-card').style.display = '';
+  const body = document.getElementById('st-sessions-body');
+  if (!ss.length) {
+    body.innerHTML = '<tr><td colspan="6" class="dim" style="padding:12px">No active sessions.</td></tr>';
+    return;
+  }
+  body.innerHTML = ss.map(s => {
+    const you = s.current ? ' <span class="badge b-LOW">this browser</span>' : '';
+    return '<tr><td><b>' + esc(s.username) + '</b>' + you + '</td><td>' + esc(s.role) + '</td>' +
+      '<td class="dim">' + esc(s.source_ip || '—') + '</td>' +
+      '<td class="dim">' + esc((s.created_at || '').slice(0, 19).replace('T', ' ')) + '</td>' +
+      '<td class="dim">' + esc((s.expires_at || '').slice(0, 19).replace('T', ' ')) + '</td>' +
+      '<td style="text-align:right"><button class="sm warn" onclick="revokeSession(\'' +
+        esc(s.id) + '\',' + s.current + ')">Revoke</button></td></tr>';
+  }).join('');
+}
+async function revokeSession(id, isCurrent) {
+  if (isCurrent && !confirm('This is your current session — revoking it signs you out. Continue?')) return;
+  try {
+    await api('/api/sessions/' + encodeURIComponent(id), {method: 'DELETE'});
+    if (isCurrent) { location.href = '/login'; return; }
+    toast('Session revoked', 'The browser was signed out', 'ok'); loadSessions();
+  } catch (e) { toast('Revoke failed', e.message, 'err'); }
+}
+const ROLE_OPTS = ['viewer', 'analyst', 'admin'];
+async function loadUsers2() {
+  let users = [];
+  try { users = await api('/api/accounts'); }
+  catch (e) { document.getElementById('st-users-card').style.display = 'none'; return; }
+  document.getElementById('st-users-card').style.display = '';
+  const body = document.getElementById('st-users-body');
+  if (!users.length) {
+    body.innerHTML = '<tr><td colspan="4" class="dim" style="padding:12px">' +
+      'No accounts yet. Add one below, then enable sign-in above.</td></tr>';
+    return;
+  }
+  body.innerHTML = users.map(u => {
+    const roleSel = '<select onchange="setUserRole(\'' + esc(u.username) + '\',this.value)">' +
+      ROLE_OPTS.map(r => '<option' + (u.role === r ? ' selected' : '') + '>' + r + '</option>').join('') +
+      '</select>';
+    const status = u.active
+      ? '<span class="badge b-LOW">ACTIVE</span>'
+      : '<span class="badge b-HIGH">DISABLED</span>';
+    return '<tr><td><b>' + esc(u.username) + '</b></td><td>' + roleSel + '</td><td>' + status +
+      '</td><td style="text-align:right">' +
+      '<button class="sm" onclick="resetUserPw(\'' + esc(u.username) + '\')">Reset pw</button> ' +
+      '<button class="sm" onclick="toggleUser(\'' + esc(u.username) + '\',' + u.active + ')">' +
+        (u.active ? 'Disable' : 'Enable') + '</button> ' +
+      '<button class="sm warn" onclick="delUser(\'' + esc(u.username) + '\')">Delete</button></td></tr>';
+  }).join('');
+}
+async function setUserRole(name, role) {
+  try { await api('/api/accounts/' + encodeURIComponent(name), {method: 'PATCH', json: {role: role}});
+    toast('Role updated', name + ' → ' + role, 'ok'); }
+  catch (e) { toast('Update failed', e.message, 'err'); loadUsers2(); }
+}
+async function toggleUser(name, active) {
+  try { await api('/api/accounts/' + encodeURIComponent(name), {method: 'PATCH', json: {active: !active}});
+    toast('User ' + (active ? 'disabled' : 'enabled'), name, 'ok'); loadUsers2(); }
+  catch (e) { toast('Update failed', e.message, 'err'); }
+}
+async function resetUserPw(name) {
+  const pw = prompt('New password for ' + name + ' (min 8 chars):');
+  if (!pw) return;
+  try { await api('/api/accounts/' + encodeURIComponent(name), {method: 'PATCH', json: {password: pw}});
+    toast('Password reset', name + ' — their sessions were revoked', 'ok'); }
+  catch (e) { toast('Reset failed', e.message, 'err'); }
+}
+async function delUser(name) {
+  if (!confirm('Delete user ' + name + '?')) return;
+  try { await api('/api/accounts/' + encodeURIComponent(name), {method: 'DELETE'});
+    toast('User deleted', name, 'ok'); loadUsers2(); }
+  catch (e) { toast('Delete failed', e.message, 'err'); }
+}
+document.getElementById('nu-add').onclick = async () => {
+  const name = document.getElementById('nu-name').value.trim();
+  const pass = document.getElementById('nu-pass').value;
+  const role = document.getElementById('nu-role').value;
+  if (!name || !pass) { toast('Missing fields', 'username and password required', 'err'); return; }
+  try {
+    await api('/api/accounts', {json: {username: name, password: pass, role: role}});
+    toast('User created', name + ' (' + role + ')', 'ok');
+    document.getElementById('nu-name').value = ''; document.getElementById('nu-pass').value = '';
+    loadUsers2();
+  } catch (e) { toast('Create failed', e.message, 'err'); }
+};
+document.getElementById('st-save').onclick = async () => {
+  const integ = {min_forward_level: document.getElementById('st-minfwd').value};
+  document.querySelectorAll('[data-integ]').forEach(el => {
+    let v = el.value.trim();
+    if (el.dataset.integ === 'syslog_port') v = +v || 514;
+    integ[el.dataset.integ] = v === '' ? null : v;
+  });
+  const r = await api('/api/config', {json: {
+    organization: document.getElementById('st-org').value,
+    timezone: document.getElementById('st-tz').value,
+    security: {auth_enabled: document.getElementById('st-auth').checked,
+               allow_enforced_response: document.getElementById('st-enforce').checked},
+    retention: {event_days: +document.getElementById('st-rev').value || 180,
+                alert_days: +document.getElementById('st-ral').value || 365,
+                audit_days: +document.getElementById('st-rau').value || 730},
+    integrations: integ}});
+  if (r.api_key) {
+    document.getElementById('st-key').textContent = 'API key (save this): ' + r.api_key;
+    API_KEY = r.api_key; localStorage.setItem('athena_api_key', API_KEY);
+  }
+  document.getElementById('t-org').textContent = document.getElementById('st-org').value;
+  toast('Settings saved', '', 'ok');
+};
+document.getElementById('st-purge').onclick = async () => {
+  const r = await api('/api/purge', {method: 'POST'});
+  toast('Retention purge complete', JSON.stringify(r.removed), 'ok');
+};
+document.getElementById('st-reset').onclick = async () => {
+  if (!confirm('Delete ALL events, alerts, responses, notes and feedback?\n' +
+               'The audit trail is preserved. This cannot be undone.')) return;
+  const full = confirm('Also delete investigation CASES and the WATCHLIST?\n\n' +
+                       'OK = full wipe · Cancel = keep cases & watchlist');
+  try {
+    const r = await api('/api/reset', {json: {full: full}});
+    const n = Object.values(r.removed).reduce((a, b) => a + b, 0);
+    toast('Data reset', n + ' records cleared' + (full ? ' (full)' : ''), 'ok');
+    refreshGlobal();
+    if (LOADERS[CURRENT]) LOADERS[CURRENT]();
+  } catch (e) { toast('Reset failed', e.message, 'err'); }
+};
+
+/* ======================= command palette ======================= */
+const NAV_ICONS = {overview:'◈', live:'⚡', alerts:'⚠', responses:'⛨', users:'◉',
+  cases:'▤', intel:'⬡', mitre:'▦', compliance:'§', audit:'≡', data:'⛁',
+  detect:'☲', settings:'⚙'};
+const PAL_ACTIONS = [
+  {ic:'↻', label:'Run analysis', sub:'re-score all users', run:runAnalysis},
+  {ic:'✦', label:'Train / retrain model', sub:'fit the ensemble', run: async () => {
+     toast('Training…', 'fitting the ensemble');
+     const r = await api('/api/train', {method:'POST'});
+     toast('Model trained', (r.model.ensemble || []).join(' + '), 'ok'); }},
+  {ic:'▶', label:'Start live engine', sub:'stream', run: async () => {
+     await api('/api/stream/start', {json:{eps:6, inject_prob:.06}});
+     toast('Live engine started', '6 events/sec', 'ok'); refreshGlobal(); }},
+  {ic:'■', label:'Stop live engine', sub:'stream', run: async () => {
+     await api('/api/stream/stop', {method:'POST'});
+     toast('Live engine stopped', '', 'ok'); refreshGlobal(); }},
+  {ic:'⇩', label:'Export alerts as CSV', sub:'download', run: () => window.open('/api/export.csv')},
+  {ic:'▤', label:'Toggle compact density', sub:'view', run: () => document.getElementById('tb-density').click()},
+  {ic:'☰', label:'Toggle sidebar', sub:'view', run: () => document.getElementById('tb-rail').click()},
+];
+let PAL_ITEMS = [], PAL_SEL = 0, PAL_USERS = [];
+function palOpen() {
+  document.getElementById('pal').classList.add('on');
+  const q = document.getElementById('pal-q');
+  q.value = ''; q.focus(); palRender('');
+  /* refresh the user list lazily so palette search covers real people */
+  api('/api/users?min_level=LOW').then(u => { PAL_USERS = u; }).catch(() => {});
+}
+function palClose() { document.getElementById('pal').classList.remove('on'); }
+function palRender(q) {
+  q = (q || '').toLowerCase().trim();
+  const items = [];
+  Object.keys(TITLES).forEach(v => {
+    if (!q || TITLES[v].toLowerCase().includes(q))
+      items.push({ic: NAV_ICONS[v] || '◈', label: TITLES[v], sub: 'view',
+                  run: () => { location.hash = v; }});
+  });
+  PAL_ACTIONS.forEach(a => {
+    if (!q || a.label.toLowerCase().includes(q)) items.push(a);
+  });
+  if (q) PAL_USERS.forEach(u => {
+    if (u.user.toLowerCase().includes(q) || (u.department || '').toLowerCase().includes(q))
+      items.push({ic:'◉', label: u.user,
+        sub: u.risk_level + ' · ' + Math.round(u.risk_score),
+        run: () => investigate(u.user)});
+  });
+  PAL_ITEMS = items.slice(0, 40); PAL_SEL = 0;
+  document.getElementById('pal-res').innerHTML = PAL_ITEMS.length
+    ? PAL_ITEMS.map((it, i) => '<div class="palit' + (i === 0 ? ' sel' : '') +
+        '" data-i="' + i + '"><span class="ic">' + it.ic + '</span><span>' +
+        esc(it.label) + '</span><span class="sub">' + esc(it.sub) + '</span></div>').join('')
+    : '<div class="empty" style="padding:24px">No matches</div>';
+}
+function palMove(d) {
+  if (!PAL_ITEMS.length) return;
+  PAL_SEL = (PAL_SEL + d + PAL_ITEMS.length) % PAL_ITEMS.length;
+  const els = document.querySelectorAll('.palit');
+  els.forEach((e, i) => e.classList.toggle('sel', i === PAL_SEL));
+  const sel = els[PAL_SEL];
+  if (sel) sel.scrollIntoView({block: 'nearest'});
+}
+function palRun(i) {
+  const it = PAL_ITEMS[i];
+  if (!it) return;
+  palClose();
+  Promise.resolve(it.run()).catch(e => toast('Action failed', e.message, 'err'));
+}
+document.getElementById('pal-q').addEventListener('input', e => palRender(e.target.value));
+document.getElementById('pal-res').addEventListener('click', e => {
+  const el = e.target.closest('.palit');
+  if (el) palRun(+el.dataset.i);
+});
+document.getElementById('pal').addEventListener('click', e => {
+  if (e.target.id === 'pal') palClose();
+});
+document.getElementById('tb-search').onclick = palOpen;
+
+/* ======================= keyboard shortcuts ======================= */
+const SHORTCUTS = [['Ctrl K', 'Command palette'], ['Ctrl B', 'Toggle sidebar'],
+  ['G then O/L/A/U/C', 'Go to Overview / Live / Alerts / Users / Cases'],
+  ['R', 'Refresh current view'], ['?', 'This help'], ['Esc', 'Close dialog']];
+function helpModal() {
+  modal('<h2>⌨ Keyboard Shortcuts</h2><div style="margin-top:14px">' +
+    SHORTCUTS.map(s => '<div class="ctl"><span class="mono" style="min-width:150px;color:var(--gold-hi)">' +
+      s[0] + '</span><span>' + s[1] + '</span></div>').join('') + '</div>');
+}
+document.getElementById('tb-help').onclick = helpModal;
+let GOKEY = false;
+document.addEventListener('keydown', e => {
+  const palOn = document.getElementById('pal').classList.contains('on');
+  if (palOn) {
+    if (e.key === 'Escape') { e.preventDefault(); palClose(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); palMove(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); palMove(-1); }
+    else if (e.key === 'Enter') { e.preventDefault(); palRun(PAL_SEL); }
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palOpen(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+    e.preventDefault(); document.getElementById('tb-rail').click(); return; }
+  if (e.key === 'Escape') { closeModal(); return; }
+  /* bare keys must never fire while the analyst is typing */
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (GOKEY) {
+    const map = {o:'overview', l:'live', a:'alerts', u:'users', c:'cases',
+                 m:'mitre', d:'data', s:'settings'};
+    if (map[e.key.toLowerCase()]) { location.hash = map[e.key.toLowerCase()]; }
+    GOKEY = false; return;
+  }
+  if (e.key.toLowerCase() === 'g') { GOKEY = true; setTimeout(() => GOKEY = false, 1200); return; }
+  if (e.key.toLowerCase() === 'r') { document.getElementById('tb-refresh').click(); return; }
+  if (e.key === '?') { helpModal(); }
+});
+
+/* ======================= identity & RBAC ======================= */
+let ME = {authenticated: true, auth_enabled: false, user: 'console', role: 'admin'};
+function applyRole() {
+  const chip = document.getElementById('tb-user');
+  if (ME.auth_enabled && ME.user) {
+    document.getElementById('tb-uname').textContent = ME.user;
+    document.getElementById('tb-urole').textContent = ME.role;
+    chip.style.display = '';
+  } else {
+    chip.style.display = 'none';
+  }
+  // hide admin-only nav for non-admins (defence-in-depth; server still enforces)
+  const adminViews = ['detect', 'settings', 'data'];
+  const isAdmin = !ME.auth_enabled || ME.role === 'admin';
+  document.body.classList.toggle('nonadmin', !isAdmin);
+  adminViews.forEach(v => {
+    const a = document.querySelector('.nav a[data-v="' + v + '"]');
+    if (a) a.style.display = isAdmin ? '' : 'none';
+  });
+}
+document.getElementById('tb-logout').onclick = async () => {
+  try { await api('/api/logout', {method: 'POST'}); } catch (e) {}
+  location.href = '/login';
+};
+
+/* ======================= boot ======================= */
+applyPrefs();
+(async () => {
+  try { ME = await api('/api/me'); } catch (e) {}
+  applyRole();
+  connectSSE();
+  show(location.hash.slice(1) || 'overview');
+  refreshGlobal();
+})();
+</script>
+{% endraw %}
+</body>
+</html>

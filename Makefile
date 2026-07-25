@@ -17,16 +17,16 @@ lint:  ## Lint with ruff
 	ruff check src tests
 
 demo:  ## Generate synthetic data and run analysis
-	aegis init
-	aegis generate --users 30 --days 30 --reset
-	aegis analyze --respond
-	aegis report
+	athena init
+	athena generate --users 30 --days 30 --reset
+	athena analyze --respond
+	athena report
 
 serve:  ## Launch the web dashboard (opens browser)
-	aegis serve --open
+	athena serve --open
 
 report:  ## Generate HTML + JSON reports
-	aegis report
+	athena report
 
 build:  ## Build a standalone binary for the current OS
 	bash packaging/build.sh

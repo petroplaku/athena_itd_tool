@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create account — ATHENA ITD</title>
+<link rel="icon" type="image/jpeg" href="/static/athena.jpeg">
+<style>
+:root{
+  --bg:#04060c; --gold:#d4af5f; --gold-hi:#e8c87a; --gold-dim:#9a7b3f;
+  --steel:#4f7fc2; --text:#e7e5dd; --muted:#98a4ba; --dim:#5f6f8a;
+  --crit:#ff4d6a; --good:#3ddc97;
+  --font:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font);color:var(--text);display:grid;place-items:center;
+  background:
+    radial-gradient(1000px 480px at 82% -12%, rgba(212,175,95,.09), transparent 60%),
+    radial-gradient(820px 420px at -8% 112%, rgba(79,127,194,.09), transparent 55%),
+    var(--bg);}
+.card{width:min(400px,92vw);background:linear-gradient(180deg,#0c1322,#070c15);
+  border:1px solid rgba(212,175,95,.28);border-radius:16px;padding:34px 30px 28px;
+  box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 60px rgba(212,175,95,.07);position:relative}
+.card::before{content:"";position:absolute;top:0;left:24px;right:24px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,175,95,.6),transparent)}
+.logo{display:block;width:96px;margin:0 auto 6px;
+  filter:drop-shadow(0 0 16px rgba(212,175,95,.32))}
+h1{text-align:center;font-size:15px;letter-spacing:3px;font-weight:800;
+  background:linear-gradient(90deg,#f0e0b0,#d4af5f);-webkit-background-clip:text;
+  background-clip:text;color:transparent;margin-bottom:2px}
+.sub{text-align:center;font-size:9px;letter-spacing:2.6px;text-transform:uppercase;
+  color:var(--gold-dim);margin-bottom:22px}
+label{display:block;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--muted);margin:0 0 6px 2px}
+input{width:100%;font-family:var(--font);font-size:14px;color:var(--text);
+  background:rgba(4,7,13,.72);border:1px solid rgba(160,178,208,.18);border-radius:9px;
+  padding:11px 13px;outline:0;margin-bottom:16px;transition:border-color .15s}
+input:focus{border-color:rgba(212,175,95,.55);box-shadow:0 0 10px rgba(212,175,95,.12)}
+.hint{font-size:10.5px;color:var(--dim);margin:-11px 2px 16px;font-family:var(--mono)}
+button{width:100%;font-family:var(--font);font-size:13.5px;font-weight:700;letter-spacing:.5px;
+  color:#1a1206;background:linear-gradient(135deg,#e8c87a,#d4af5f);border:0;border-radius:9px;
+  padding:12px;cursor:pointer;transition:filter .15s;margin-top:4px}
+button:hover{filter:brightness(1.08)}
+button:disabled{opacity:.6;cursor:progress}
+.err{display:none;font-size:12.5px;color:#ffb1bd;background:rgba(255,77,106,.1);
+  border:1px solid rgba(255,77,106,.35);border-radius:8px;padding:9px 11px;margin-bottom:14px}
+.err.on{display:block}
+.role{text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--muted);line-height:1.5;
+  border:1px solid rgba(160,178,208,.16);border-radius:8px;padding:9px 10px;margin-bottom:18px}
+.role b{color:var(--good)}
+.alt{text-align:center;font-size:12px;color:var(--muted);margin-top:16px}
+.alt a{color:var(--gold-hi);text-decoration:none;font-weight:600}
+.alt a:hover{text-decoration:underline}
+.foot{text-align:center;font-size:10.5px;color:var(--dim);font-family:var(--mono);margin-top:18px}
+</style>
+</head>
+<body>
+<form class="card" id="f" autocomplete="on">
+  <img src="/static/athena.jpeg" alt="ATHENA ITD" class="logo">
+  <h1>ATHΞNA ITD</h1>
+  <div class="sub">{{ organization }}</div>
+  <div class="err" id="err"></div>
+  <label for="u">Username</label>
+  <input id="u" name="username" autocomplete="username" autofocus required
+         pattern="[A-Za-z0-9._-]{3,32}" title="3–32 characters: letters, digits, . _ -">
+  <label for="p">Password</label>
+  <input id="p" name="password" type="password" autocomplete="new-password" required minlength="8">
+  <div class="hint">At least 8 characters.</div>
+  <div class="role"><b>{{ signup_role }}</b> account — standard, non-admin access</div>
+  <button type="submit" id="btn">Create account</button>
+  <div class="alt">Already have an account? <a href="/login">Sign in</a></div>
+  <div class="foot">Insider Threat Detection · secure console</div>
+</form>
+<script>
+"use strict";
+const f = document.getElementById('f'), err = document.getElementById('err'),
+      btn = document.getElementById('btn');
+function fail(m){ err.textContent = m; err.classList.add('on'); btn.disabled = false; btn.textContent = 'Create account'; }
+f.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  err.classList.remove('on'); btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const r = await fetch('/api/signup', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: document.getElementById('u').value,
+                            password: document.getElementById('p').value})
+    });
+    if (r.ok) { location.href = '/'; return; }   // auto-signed-in on success
+    const d = await r.json().catch(() => ({}));
+    fail(d.detail || ('Sign-up failed (' + r.status + ')'));
+  } catch (ex) { fail('Network error — is the server reachable?'); }
+});
+</script>
+</body>
+</html>

@@ -3,19 +3,19 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "aegis-uba"
-version = "1.0.0"
-description = "Aegis UBA — AI-driven Insider Threat & User Behavior Analytics platform (CLI + Web GUI)"
+name = "athena-itd"
+version = "3.2.0"
+description = "ATHENA ITD — AI-driven Insider Threat Detection platform (CLI + Web GUI)"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
-authors = [{ name = "Aegis UBA Team" }]
+license = { text = "Proprietary - All Rights Reserved (see LICENSE.md)" }
+authors = [{ name = "Petro Plaku", email = "pplaku799@gmail.com" }]
 keywords = ["security", "ueba", "insider-threat", "anomaly-detection", "soc", "siem"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: MIT License",
+    "License :: Other/Proprietary License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Topic :: Security",
@@ -42,18 +42,18 @@ dependencies = [
 dev = ["pytest>=7.4", "pytest-cov>=4.1", "ruff>=0.3", "pyinstaller>=6.0"]
 
 [project.urls]
-Homepage = "https://example.com/aegis-uba"
-Documentation = "https://example.com/aegis-uba/docs"
+Homepage = "https://github.com/petroplaku/athena-itd"
+Documentation = "https://github.com/petroplaku/athena-itd#readme"
 
 [project.scripts]
-aegis = "aegis_uba.cli:main"
-aegis-uba = "aegis_uba.cli:main"
+athena = "athena_itd.cli:main"
+athena-itd = "athena_itd.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-aegis_uba = ["web/templates/*.html", "web/static/*", "report/templates/*.html"]
+athena_itd = ["web/templates/*.html", "web/static/*", "report/templates/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -66,3 +66,19 @@ filterwarnings = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+# Curated, meaningful ruleset: pyflakes/pycodestyle errors, import order,
+# bugbears, comprehensions, and pyupgrade. Opinionated stylistic rules are left off.
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = [
+    "E501",   # line length is enforced by the formatter, not the linter
+    "E702",   # compact `a; b` statements are a deliberate style in this codebase
+    "B008",   # function call in argument default — this is FastAPI's Depends() pattern
+    "B904",   # `raise ... from` is optional here; re-raises are already explicit
+    "B905",   # `zip(strict=…)` not required for our fixed-length pairs
+    "B007",   # unused loop var is intentional in a few enumerations
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F401", "F811"]  # fixtures & re-imports are idiomatic in tests

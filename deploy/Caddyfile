@@ -1,0 +1,20 @@
+# ATHENA ITD reverse proxy — automatic HTTPS via Let's Encrypt.
+# Replace athena.example.com with your real hostname (and set a valid DNS A record).
+athena.example.com {
+	encode gzip zstd
+	# Forward to the app; Caddy sets X-Forwarded-Proto=https so the app emits HSTS.
+	reverse_proxy athena:8000
+	# Belt-and-braces security headers at the edge (app also sets these).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+}
+
+# Local / no-DNS testing: `caddy run` on http://localhost — comment the block above.
+# :80 {
+# 	reverse_proxy athena:8000
+# }
