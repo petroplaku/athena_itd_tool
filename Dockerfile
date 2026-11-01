@@ -3,13 +3,13 @@
 # ATHENA ITD — production container image
 # Multi-stage: build a wheel, then run on a slim, non-root runtime.
 # ─────────────────────────────────────────────────────────────────────────────
-FROM python:3.12-slim AS build
+FROM python:3.15-slim AS build
 WORKDIR /build
 COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install --upgrade pip build && python -m build --wheel --outdir /dist
 
-FROM python:3.12-slim AS runtime
+FROM python:3.15-slim AS runtime
 LABEL org.opencontainers.image.title="ATHENA ITD" \
       org.opencontainers.image.description="AI-driven Insider Threat Detection (CLI + Web console)" \
       org.opencontainers.image.authors="Petro Plaku <pplaku799@gmail.com>"
